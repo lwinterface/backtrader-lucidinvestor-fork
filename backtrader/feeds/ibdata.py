@@ -343,6 +343,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         super(IBData, self).start()
         # Kickstart store and get queue to wait on
         self.qlive = self.ib.start(data=self)
+        self.bidasklive = None
         self.qhist = None
 
         self._usertvol = not self.p.rtbar
@@ -412,11 +413,11 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
             return
 
         if self._usertvol:
-            self.qlive = self.ib.reqMktData(self.contract)
+            self.qlive, self.bidasklive = self.ib.reqMktData(self.contract)
         else:
-            self.qlive = self.ib.reqRealTimeBars(self.contract)
+            self.qlive, self.bidasklive = self.ib.reqRealTimeBars(self.contract)
 
-        return self.qlive
+        return self.qlive, self.bidasklive
 
     def canceldata(self):
         '''Cancels Market Data subscription, checking asset type and rtbar'''

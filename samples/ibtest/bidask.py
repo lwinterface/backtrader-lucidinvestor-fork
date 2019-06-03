@@ -26,6 +26,15 @@ class St(bt.Strategy):
                 print(e)
                 print(q)
 
+            try:
+                ask = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].ask
+                bid = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].bid
+                print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
+                print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive.queue)))
+            except Exception as e:
+                print(e)
+                print("error requesting bid/ask price")
+
     data_live = False
 
     def notify_data(self, data, status, *args, **kwargs):
