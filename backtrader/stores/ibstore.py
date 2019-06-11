@@ -615,7 +615,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
     def getTickerQueue(self, start=False):
         '''Creates ticker/Queue for data delivery to a data feed'''
         q = queue.Queue()
-        q_bidask = queue.Queue()
+        q_bidask = queue.Queue(maxsize=15)
 
         if start:
             q.put(None)
@@ -927,14 +927,17 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         except Exception as e:
             lastbid = 0.0
 
-        #TODO: limit the size of the bid/ask
-        '''
         if len(self.qs_bidask[tickerId].queue) == self.qs_bidask[tickerId].maxsize:
-            self.qs_bidask[tickerId] = queue.Queue(maxsize=self.qs_bidask[tickerId].maxsize)
-            bidask = BidAsk(ask=lastask, bid=lastbid)
-            self.qs_bidask[tickerId].put(bidask)
+            #self.qs_bidask[tickerId] = queue.Queue(maxsize=self.qs_bidask[tickerId].maxsize)
+            # saving last bid/ask quote
+            # bidask = BidAsk(ask=lastask, bid=lastbid)
+
+            print("\n[" +str(tickerId) +"] - clearing bidask_queue")
+            self.qs_bidask[tickerId].queue.clear()
+            # adding last bid/ask quote to the cleared queue for continuity
+            # self.qs_bidask[tickerId].put(bidask)
             pass
-        '''
+
 
         if msg.field == 2:
             print("ask price = %s" % msg.price)

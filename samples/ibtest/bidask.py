@@ -14,26 +14,30 @@ class St(bt.Strategy):
 
     def next(self):
         if self.data_live == True:
-            asset = self.getdatanames()[0]
 
-            q = self.datas[self.getdatanames().index(asset)].qlive.queue
-            print(str(asset) + "/ Close price: " + str(self.datas[self.getdatanames().index(asset)].close[0]))
-            print(str(asset)+ "/ len qlive: " +str(len(q)))
-            try:
-                print("\n"+ str(asset) +": price - " + str(q[0].price))
-                print(str(asset)+": vwap - " + str(q[0].vwap))
-            except Exception as e:
-                print(e)
-                print(q)
+            for asset in self.getdatanames():
+            #asset = self.getdatanames()[0]
 
-            try:
-                ask = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].ask
-                bid = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].bid
-                print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
-                print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive.queue)))
-            except Exception as e:
-                print(e)
-                print("error requesting bid/ask price")
+                print("\n ASSET: " +str(asset))
+
+                q = self.datas[self.getdatanames().index(asset)].qlive.queue
+                print(str(asset) + "/ Close price: " + str(self.datas[self.getdatanames().index(asset)].close[0]))
+                print(str(asset)+ "/ len qlive: " +str(len(q)))
+                try:
+                    print("\n"+ str(asset) +": price - " + str(q[0].price))
+                    print(str(asset)+": vwap - " + str(q[0].vwap))
+                except Exception as e:
+                    print(e)
+                    print(q)
+
+                try:
+                    ask = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].ask
+                    bid = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].bid
+                    print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
+                    print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive.queue)))
+                except Exception as e:
+                    print(e)
+                    print("error requesting bid/ask price")
 
     data_live = False
 
@@ -60,7 +64,7 @@ def run(args=None):
     '''
 
     ib_name = '-STK-SMART-USD'
-    assets = ['SPY']
+    assets = ['SPY', 'GSY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.
