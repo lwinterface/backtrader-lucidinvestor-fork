@@ -932,6 +932,21 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             # saving last bid/ask quote
             # bidask = BidAsk(ask=lastask, bid=lastbid)
 
+            # TODO: check why tickerID comes twice when clearing the queue
+            '''
+            [16777217] - clearing bidask_queue
+            ask price = 289.38
+            ask price = 289.38
+            bid price = 289.37
+            bid price = 289.37
+            
+            [16777219] - clearing bidask_queue
+            bid price = 289.36
+            ask price = 289.37
+            bid price = 289.36
+            ask price = 289.37
+            '''
+
             print("\n[" +str(tickerId) +"] - clearing bidask_queue")
             self.qs_bidask[tickerId].queue.clear()
             # adding last bid/ask quote to the cleared queue for continuity
