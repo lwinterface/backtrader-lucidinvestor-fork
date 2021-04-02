@@ -2,7 +2,7 @@
 # -*- coding: utf-8; py-indent-offset:4 -*-
 ###############################################################################
 #
-# Copyright (C) 2015, 2016, 2017 Daniel Rodriguez
+# Copyright (C) 2015-2020 Daniel Rodriguez
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ which can be converted from/to dates
 '''
 
 import datetime
+import warnings
 
 from matplotlib.dates import AutoDateLocator as ADLocator
 from matplotlib.dates import RRuleLocator as RRLocator
@@ -36,7 +37,7 @@ from matplotlib.dates import (HOURS_PER_DAY, MIN_PER_HOUR, SEC_PER_MIN,
                               MONTHS_PER_YEAR, DAYS_PER_WEEK,
                               SEC_PER_HOUR, SEC_PER_DAY,
                               num2date, rrulewrapper, YearLocator,
-                              MicrosecondLocator, warnings)
+                              MicrosecondLocator)
 
 from dateutil.relativedelta import relativedelta
 import numpy as np

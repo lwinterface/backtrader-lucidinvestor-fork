@@ -2,7 +2,7 @@
 # -*- coding: utf-8; py-indent-offset:4 -*-
 ###############################################################################
 #
-# Copyright (C) 2015, 2016 Daniel Rodriguez
+# Copyright (C) 2015-2020 Daniel Rodriguez
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import backtrader as bt
 import backtrader.utils.flushfile
+from backtrader.metabase import ParamsBase
 
 
 modpath = os.path.dirname(os.path.abspath(__file__))
@@ -220,3 +221,17 @@ class TestStrategy(bt.Strategy):
                             assert chkval == linevals[i][0]
                         except AssertionError:
                             assert chkval == linevals[i][1]
+
+
+class SampleParamsHolder(ParamsBase):
+    """
+    This class is used as base for tests that check the proper
+    handling of meta parameters like `frompackages`, `packages`, `params`, `lines`
+    in inherited classes
+    """
+    frompackages = (
+        ('math', ('factorial')),
+    )
+
+    def __init__(self):
+        self.range = factorial(10)
