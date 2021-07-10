@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import backtrader as bt
-
+from datetime import datetime
 
 # https://medium.com/@danjrod/interactive-brokers-in-python-with-backtrader-23dea376b2fc
 # Very quickly a whooping total of 1082 bars. This is so, because backtrader has done back-filling for us.
@@ -12,12 +12,26 @@ import backtrader as bt
 
 class St(bt.Strategy):
 
+    def __init__(self):
+        # nb of next_live run before clean shutdown
+        self.runtime = 100
+
     def next(self):
 
-        print(" cash = " + str(self.broker.getcash()))
-        print (" portfolio allocation = " +str(self.get_total_portfolio_allocation() ))
 
-        if self.data_live == True and False:
+
+        #print(" cash = " + str(self.broker.getcash()))
+        #print (" portfolio allocation = " +str(self.get_total_portfolio_allocation() ))
+
+        if self.data_live:
+            now = datetime.now()
+            current_time = now.strftime("%H:%M:%S")
+            print("\n\n Current Time =", current_time)
+
+            # cannot be after the for-loop as this is where we turn it off
+            if not self.broker.ib.get_bidask_streamstatus():
+                print("activating bid/ask streaming")
+                self.broker.ib.stream_bidask(True)
 
             for asset in self.getdatanames():
             #asset = self.getdatanames()[0]
@@ -28,20 +42,31 @@ class St(bt.Strategy):
                 print(str(asset) + "/ Close price: " + str(self.datas[self.getdatanames().index(asset)].close[0]))
                 print(str(asset)+ "/ len qlive: " +str(len(q)))
                 try:
-                    print("\n"+ str(asset) +": price - " + str(q[0].price))
-                    print(str(asset)+": vwap - " + str(q[0].vwap))
+                    print("\n"+ str(asset) +": price - " + str(q[-1].price))
+                    print(str(asset)+": vwap - " + str(q[-1].vwap))
                 except Exception as e:
                     print(e)
                     print(q)
 
                 try:
-                    ask = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].ask
-                    bid = self.datas[self.getdatanames().index(asset)].bidasklive.queue[-1].bid
+                    ask = self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue[-1].ask
+                    bid = self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue[-1].bid
                     print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
-                    print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive.queue)))
+                    print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue)))
+
+                    print("removing bid/ask streaming")
+                    # tickerID = self.datas[0].ib.REQIDBASE
+                    self.broker.ib.stream_bidask(
+                        state=False, tickerId=self.datas[self.getdatanames().index(asset)].bidasklive['tickerId']
+                    )
                 except Exception as e:
                     print(e)
                     print("error requesting bid/ask price")
+
+            self.runtime = self.runtime - 1
+
+            if self.runtime < 1:
+                self.env.runstop()
 
     data_live = False
 
@@ -66,7 +91,7 @@ class St(bt.Strategy):
 
         accountid = self.broker.ib.managed_accounts[0]
         cash_usd = self.broker.ib.acc_upds[accountid].CashBalance.USD
-        cash_total = self.broker.ib.acc_upds[accountid].CashBalance.Base
+        cash_total = self.broker.ib.acc_upds[accountid].CashBalance.BASE
         cash_notconverted = cash_total - cash_usd
 
         cash_totalreserve = cash_usdsecurity + cash_notconverted
@@ -97,7 +122,7 @@ def run(args=None):
     '''
 
     ib_name = '-STK-SMART-USD'
-    assets = ['QQQ', 'SPY']
+    assets = ['GSY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.

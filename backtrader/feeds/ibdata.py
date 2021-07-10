@@ -190,6 +190,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         which uses the default values (``STK`` and ``SMART``) and overrides
         the currency to be ``USD``
     '''
+    # todo: add parameters for live_bidask
     params = (
         ('sectype', 'STK'),  # usual industry value
         ('exchange', 'SMART'),  # usual industry value
@@ -376,6 +377,8 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
             cdetails = cds[0]
             self.contract = cdetails.contractDetails.m_summary
             self.contractdetails = cdetails.contractDetails
+            # todo: add tickerId
+            # cdetails.reqId
         else:
             # no contract can be found (or many)
             self.put_notification(self.DISCONNECTED)
