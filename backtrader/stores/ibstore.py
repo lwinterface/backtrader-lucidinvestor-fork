@@ -82,8 +82,37 @@ class RTVolume(object):
             self.datetime += tmoffset
 
 
+class BidAsk(object):
+    '''Parses a tickPrice tickType 1 & 2 (Bid & Ask Price) event from the IB API into its
+    constituent fields.
+
+    Market data tick price callback. Handles all price related ticks. Every tickPrice callback is followed by a
+    tickSize. A tickPrice value of -1 or 0 followed by a tickSize of 0 indicates there is no data for this field
+    currently available, whereas a tickPrice with a positive tickSize indicates an active quote of 0 (typically for
+    a combo contract).
+
+    '''
+    _fields = [
+        ('bid', float),
+        ('ask', float),
+        ('datetime', _ts2dt)
+    ]
+
+    def __init__(self, bid=None, ask=None, tmoffset=None):
+        # Use a provided string or simulate a list of empty tokens
+        # tokens = iter(msg.split(';'))
+
+        self.bid = bid
+        self.ask = ask
+
+        # If time/offset was provided use it
+        # if tmoffset is not None:
+        #    self.datetime += tmoffset
+
+
 class MetaSingleton(MetaParams):
     '''Metaclass to make a metaclassed class a singleton'''
+
     def __init__(cls, name, bases, dct):
         super(MetaSingleton, cls).__init__(name, bases, dct)
         cls._singleton = None
@@ -218,8 +247,11 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         self._lock_tmoffset = threading.Lock()
         self.tmoffset = timedelta()  # to control time difference with server
 
+        self._stream_bidask = False # to control if we listen to bid/ask TickPrice
+
         # Structures to hold datas requests
         self.qs = collections.OrderedDict()  # key: tickerId -> queues
+        self.qs_bidask = collections.OrderedDict()
         self.ts = collections.OrderedDict()  # key: queue -> tickerId
         self.iscash = dict()  # tickerIds from cash products (for ex: EUR.JPY)
 
@@ -266,6 +298,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 continue
 
             message = getattr(ibopt.message, name)
+            # amongst others, tickString & tickPrice is registered here.
             self.conn.register(method, message)
 
         # This utility key function transforms a barsize into a:
@@ -317,7 +350,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         try:
             self.conn.disconnect()  # disconnect should be an invariant
         except AttributeError:
-            pass    # conn may have never been connected and lack "disconnect"
+            pass  # conn may have never been connected and lack "disconnect"
 
         # Unblock any calls set on these events
         self._event_managed_accounts.set()
@@ -602,17 +635,22 @@ class IBStore(with_metaclass(MetaSingleton, object)):
     def getTickerQueue(self, start=False):
         '''Creates ticker/Queue for data delivery to a data feed'''
         q = queue.Queue()
+        # Insertion will block once this size has been reached, until queue items are consumed or queue is cleared
+        q_bidask = queue.Queue(maxsize=15)
+
         if start:
             q.put(None)
-            return q
+            q_bidask.put(None)
+            return q, q_bidask
 
         with self._lock_q:
             tickerId = self.nextTickerId()
             self.qs[tickerId] = q  # can be managed from other thread
+            self.qs_bidask[tickerId] = q_bidask
             self.ts[q] = tickerId
             self.iscash[tickerId] = False
 
-        return tickerId, q
+        return tickerId, q, q_bidask
 
     def cancelQueue(self, q, sendnone=False):
         '''Cancels a Queue for data delivery'''
@@ -631,7 +669,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     def getContractDetails(self, contract, maxcount=None):
         cds = list()
-        q = self.reqContractDetails(contract)
+        q, q_bidask = self.reqContractDetails(contract)
         while True:
             msg = q.get()
             if msg is None:
@@ -647,9 +685,9 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     def reqContractDetails(self, contract):
         # get a ticker/queue for identification/data delivery
-        tickerId, q = self.getTickerQueue()
+        tickerId, q, q_bidask = self.getTickerQueue()
         self.conn.reqContractDetails(tickerId, contract)
-        return q
+        return q, q_bidask
 
     @ibregister
     def contractDetailsEnd(self, msg):
@@ -707,6 +745,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         if not durations:  # return a queue and put a None in it
             return self.getTickerQueue(start=True)
 
+        # todo: maybe q_bidask should be used there as well
         # Get or reuse a queue
         if tickerId is None:
             tickerId, q = self.getTickerQueue()
@@ -763,7 +802,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         '''Proxy to reqHistorical Data'''
 
         # get a ticker/queue for identification/data delivery
-        tickerId, q = self.getTickerQueue()
+        tickerId, q, q_bidask = self.getTickerQueue()
 
         if contract.m_secType in ['CASH', 'CFD']:
             self.iscash[tickerId] = True
@@ -802,21 +841,47 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             self.conn.cancelHistoricalData(self.ts[q])
             self.cancelQueue(q, True)
 
+    def stream_bidask(self, state=False, tickerId=None):
+        self._stream_bidask = state
+
+        if not state:
+            if tickerId is None:
+                for q_ticker in self.qs_bidask:
+                    self.qs_bidask[q_ticker].queue.clear()
+            else:
+                self.qs_bidask[tickerId].queue.clear()
+        return
+
+    def get_bidask_streamstatus(self):
+        return self._stream_bidask
+
     def reqRealTimeBars(self, contract, useRTH=False, duration=5):
-        '''Creates a request for (5 seconds) Real Time Bars
+        '''Requests real time bars. Currently, only 5 seconds bars are provided. This request is subject to the same
+        pacing as any historical data request: no more than 60 API queries in more than 600 seconds.
+        Real time bars subscriptions are also included in the calculation of the number of Level 1 market data
+        subscriptions allowed in an account.
+
+        Creates a request for (5 seconds) Real Time Bars
 
         Params:
           - contract: a ib.ext.Contract.Contract intance
-          - useRTH: (default: False) passed to TWS
+          - useRTH: (default: False) passed to TWS - useRTH	set to 0 to obtain the data which was also generated
+          outside of the Regular Trading Hours, set to 1 to obtain only the RTH data
           - duration: (default: 5) passed to TWS, no other value works in 2016)
 
         Returns:
           - a Queue the client can wait on to receive a RTVolume instance
         '''
         # get a ticker/queue for identification/data delivery
-        tickerId, q = self.getTickerQueue()
+        tickerId, q, q_bidask = self.getTickerQueue()
 
         # 20150929 - Only 5 secs supported for duration
+        # whatToShow	the nature of the data being retrieved:
+        #
+        #     TRADES <- DEFAULT IN BACKTRADER
+        #     MIDPOINT
+        #     BID
+        #     ASK
         self.conn.reqRealTimeBars(
             tickerId,
             contract,
@@ -824,7 +889,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             bytes('TRADES'),
             int(useRTH))
 
-        return q
+        return q, {'tickerId': tickerId, 'queue': q_bidask}
 
     def cancelRealTimeBars(self, q):
         '''Cancels an existing MarketData subscription
@@ -840,7 +905,10 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             self.cancelQueue(q, True)
 
     def reqMktData(self, contract, what=None):
-        '''Creates a MarketData subscription
+        ''' Requests real time market data. Returns market data for an instrument either in real time or 10-15 minutes
+        delayed (depending on the market data type specified)
+
+        Creates a MarketData subscription
 
         Params:
           - contract: a ib.ext.Contract.Contract intance
@@ -849,19 +917,48 @@ class IBStore(with_metaclass(MetaSingleton, object)):
           - a Queue the client can wait on to receive a RTVolume instance
         '''
         # get a ticker/queue for identification/data delivery
-        tickerId, q = self.getTickerQueue()
+        # the bid/ask price is part of the default dataset returned
+        tickerId, q, q_bidask = self.getTickerQueue()
+
+        # genericTickList	comma separated ids of the available generic ticks:
+        #     100 Option Volume (currently for stocks)
+        #     101 Option Open Interest (currently for stocks)
+        #     104 Historical Volatility (currently for stocks)
+        #     105 Average Option Volume (currently for stocks)
+        #     106 Option Implied Volatility (currently for stocks)
+        #     162 Index Future Premium
+        #     165 Miscellaneous Stats
+        #     221 Mark Price (used in TWS P&L computations)
+        #     225 Auction values (volume, price and imbalance)
+        #     233 RTVolume - contains the last trade price, last trade size, last trade time, total volume, VWAP,
+        #                    and single trade flag.
+        #     236 Shortable
+        #     256 Inventory
+        #     258 Fundamental Ratios
+        #     411 Realtime Historical Volatility
+        #     456 IBDividends
         ticks = '233'  # request RTVOLUME tick delivered over tickString
 
         if contract.m_secType in ['CASH', 'CFD']:
             self.iscash[tickerId] = True
+            # The tickType, left empty in this example, allows you to specify what kind of data you’re looking for.
+            # Since the bid/ask price is part of the default dataset returned, we don’t need to specify a tickType.
             ticks = ''  # cash markets do not get RTVOLUME
             if what == 'ASK':
                 self.iscash[tickerId] = 2
 
         # q.put(None)  # to kickstart backfilling
         # Can request 233 also for cash ... nothing will arrive
+
+        # The fourth parameter under reqMktData is if you want snapshot data for an asset that you do not have a
+        # subscription to. If you have a market data subscription, or one is not required, set this to False.
+        #
+        # The fifth item is to obtain a snapshot rather than streaming data. This is for assets you already have a
+        # subscription for, or if a subscription is not required.
+
+        # todo: I think we should add 1 False at the end for "subscribed snapshot"
         self.conn.reqMktData(tickerId, contract, bytes(ticks), False)
-        return q
+        return q, {'tickerId':tickerId, 'queue':q_bidask}
 
     def cancelMktData(self, q):
         '''Cancels an existing MarketData subscription
@@ -880,6 +977,14 @@ class IBStore(with_metaclass(MetaSingleton, object)):
     def tickString(self, msg):
         # Receive and process a tickString message
         if msg.tickType == 48:  # RTVolume
+            # https://interactivebrokers.github.io/tws-api/tick_types.html#rt_volume
+            # The RT Volume tick type corresponds to the TWS' Time & Sales window and contains the last trade's price,
+            # size and time along with current day's total traded volume, Volume Weighted Average Price (VWAP) and
+            # whether or not the trade was filled by a single market maker.
+
+            # https://www.interactivebrokers.com/en/software/tws/usersguidebook/mosaic/timensales.htm
+            # There is a new setting available starting in TWS v969 which displays tick-by-tick data in the TWS Time &
+            # Sales Window. If this setting is checked, it will provide a higher granularity of data than RTVolume.
             try:
                 rtvol = RTVolume(msg.value)
             except ValueError:  # price not in message ...
@@ -891,18 +996,71 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     @ibregister
     def tickPrice(self, msg):
-        '''Cash Markets have no notion of "last_price"/"last_size" and the
+        '''
+        https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#ae851ec3a1e0fa2d0964c7779b0c89718
+        Market data tick price callback. Handles all price related ticks. Every tickPrice callback is followed by a
+        tickSize. A tickPrice value of -1 or 0 followed by a tickSize of 0 indicates there is no data for this field
+        currently available, whereas a tickPrice with a positive tickSize indicates an active quote of 0 (typically
+        for a combo contract).
+
+        Cash Markets have no notion of "last_price"/"last_size" and the
         tracking of the price is done (industry de-facto standard at least with
         the IB API) following the BID price
 
         A RTVolume which will only contain a price is put into the client's
         queue to have a consistent cross-market interface
         '''
+
+        #todo: wrong assumption - necessary to execute for Cash Markets - to review
+        if not self._stream_bidask:
+            return
+
         # Used for "CASH" markets
         # The price field has been seen to be missing in some instances even if
         # "field" is 1
         tickerId = msg.tickerId
         fieldcode = self.iscash[tickerId]
+
+        try:
+            lastask = self.qs_bidask[tickerId].queue[-1].ask
+        except Exception as e:
+            lastask = 0.0
+
+        try:
+            lastbid = self.qs_bidask[tickerId].queue[-1].bid
+        except Exception as e:
+            lastbid = 0.0
+
+        if len(self.qs_bidask[tickerId].queue) == self.qs_bidask[tickerId].maxsize:
+            # self.qs_bidask[tickerId] = queue.Queue(maxsize=self.qs_bidask[tickerId].maxsize)
+            # saving last bid/ask quote
+            # bidask = BidAsk(ask=lastask, bid=lastbid)
+
+            self.qs_bidask[tickerId].queue.clear()
+            # adding last bid/ask quote to the cleared queue for continuity
+            # self.qs_bidask[tickerId].put(bidask)
+            pass
+
+        if msg.field == 2:
+            # Lowest price offer on the contract.
+            # Tick Id = 2: https://interactivebrokers.github.io/tws-api/tick_types.html
+            ## print("ask price = %s" % msg.price)
+            print("Ask Price: " + str(msg))
+            bidask = BidAsk(ask=msg.price, bid=lastbid)
+            self.qs_bidask[tickerId].put(bidask)
+
+        elif msg.field == 1:
+            # Highest priced bid for the contract.
+            # Tick Id = 1: https://interactivebrokers.github.io/tws-api/tick_types.html
+            ## print("bid price = %s" % msg.price)
+            print("Bid Price: " + str(msg))
+            bidask = BidAsk(ask=lastask, bid=msg.price)
+            self.qs_bidask[tickerId].put(bidask)
+
+        elif msg.field == 4:
+            # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
+            print("Last Price: " + str(msg))
+
         if fieldcode:
             if msg.field == fieldcode:  # Expected cash field code
                 try:
@@ -920,6 +1078,20 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                     pass
                 else:
                     self.qs[tickerId].put(rtvol)
+
+    @ibregister
+    def tickSize(self, msg):
+        if not self._stream_bidask:
+            return
+
+        # https: // interactivebrokers.github.io / tws - api / tick_types.html
+        if msg.field == 0:
+            # Bid Size
+            print("Bid Size: " + str(msg))
+        elif msg.field == 3:
+            # Ask Size
+            print ("Ask Size: " + str(msg))
+        return
 
     @ibregister
     def realtimeBar(self, msg):
@@ -1106,7 +1278,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         ('11 M', ('1 day', '1 W', '1 M')),
 
         # 1+ years
-        ('1 Y',  ('1 day', '1 W', '1 M')),
+        ('1 Y', ('1 day', '1 W', '1 M')),
     ])
 
     # Sizes allow for quick translation from bar sizes above to actual
@@ -1130,7 +1302,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         'Y': TimeFrame.Years,
     }
 
-    def getdurations(self,  timeframe, compression):
+    def getdurations(self, timeframe, compression):
         key = (timeframe, compression)
         if key not in self.revdur:
             return []
@@ -1260,7 +1432,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         # Next: 1 -> 11 months (11 incl)
         months = (y2 * 12 + m2) - (y1 * 12 + m1) + (
-            (d2, H2, M2, S2, US2) > (d1, H1, M1, S1, US1))
+                (d2, H2, M2, S2, US2) > (d1, H1, M1, S1, US1))
         if months <= 1:  # months <= 11
             return '1 M'  # return '{} M'.format(months)
         elif months <= 11:
