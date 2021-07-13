@@ -14,7 +14,7 @@ class St(bt.Strategy):
 
     def __init__(self):
         # nb of next_live run before clean shutdown
-        self.runtime = 100
+        self.runtime = 20
 
     def next(self):
 
@@ -49,6 +49,9 @@ class St(bt.Strategy):
                     print(q)
 
                 try:
+                    print(str(asset) + "/ len bidasklive['queue']: " + str(len(
+                        self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue)
+                    ))
                     ask = self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue[-1].ask
                     bid = self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue[-1].bid
                     print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
@@ -122,7 +125,7 @@ def run(args=None):
     '''
 
     ib_name = '-STK-SMART-USD'
-    assets = ['GSY']
+    assets = ['SPY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.

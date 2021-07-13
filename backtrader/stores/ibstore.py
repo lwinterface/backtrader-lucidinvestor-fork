@@ -1011,9 +1011,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         queue to have a consistent cross-market interface
         '''
 
-        #todo: wrong assumption - necessary to execute for Cash Markets - to review
-        if not self._stream_bidask:
-            return
+        #todo: skip if not cash or not _stream_bidask
 
         # Used for "CASH" markets
         # The price field has been seen to be missing in some instances even if
@@ -1021,45 +1019,46 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         tickerId = msg.tickerId
         fieldcode = self.iscash[tickerId]
 
-        try:
-            lastask = self.qs_bidask[tickerId].queue[-1].ask
-        except Exception as e:
-            lastask = 0.0
+        if self._stream_bidask:
+            try:
+                lastask = self.qs_bidask[tickerId].queue[-1].ask
+            except Exception as e:
+                lastask = 0.0
 
-        try:
-            lastbid = self.qs_bidask[tickerId].queue[-1].bid
-        except Exception as e:
-            lastbid = 0.0
+            try:
+                lastbid = self.qs_bidask[tickerId].queue[-1].bid
+            except Exception as e:
+                lastbid = 0.0
 
-        if len(self.qs_bidask[tickerId].queue) == self.qs_bidask[tickerId].maxsize:
-            # self.qs_bidask[tickerId] = queue.Queue(maxsize=self.qs_bidask[tickerId].maxsize)
-            # saving last bid/ask quote
-            # bidask = BidAsk(ask=lastask, bid=lastbid)
+            if len(self.qs_bidask[tickerId].queue) == self.qs_bidask[tickerId].maxsize:
+                # self.qs_bidask[tickerId] = queue.Queue(maxsize=self.qs_bidask[tickerId].maxsize)
+                # saving last bid/ask quote
+                # bidask = BidAsk(ask=lastask, bid=lastbid)
 
-            self.qs_bidask[tickerId].queue.clear()
-            # adding last bid/ask quote to the cleared queue for continuity
-            # self.qs_bidask[tickerId].put(bidask)
-            pass
+                self.qs_bidask[tickerId].queue.clear()
+                # adding last bid/ask quote to the cleared queue for continuity
+                # self.qs_bidask[tickerId].put(bidask)
+                pass
 
-        if msg.field == 2:
-            # Lowest price offer on the contract.
-            # Tick Id = 2: https://interactivebrokers.github.io/tws-api/tick_types.html
-            ## print("ask price = %s" % msg.price)
-            print("Ask Price: " + str(msg))
-            bidask = BidAsk(ask=msg.price, bid=lastbid)
-            self.qs_bidask[tickerId].put(bidask)
+            if msg.field == 2:
+                # Lowest price offer on the contract.
+                # Tick Id = 2: https://interactivebrokers.github.io/tws-api/tick_types.html
+                ## print("ask price = %s" % msg.price)
+                print("Ask Price: " + str(msg))
+                bidask = BidAsk(ask=msg.price, bid=lastbid)
+                self.qs_bidask[tickerId].put(bidask)
 
-        elif msg.field == 1:
-            # Highest priced bid for the contract.
-            # Tick Id = 1: https://interactivebrokers.github.io/tws-api/tick_types.html
-            ## print("bid price = %s" % msg.price)
-            print("Bid Price: " + str(msg))
-            bidask = BidAsk(ask=lastask, bid=msg.price)
-            self.qs_bidask[tickerId].put(bidask)
+            elif msg.field == 1:
+                # Highest priced bid for the contract.
+                # Tick Id = 1: https://interactivebrokers.github.io/tws-api/tick_types.html
+                ## print("bid price = %s" % msg.price)
+                print("Bid Price: " + str(msg))
+                bidask = BidAsk(ask=lastask, bid=msg.price)
+                self.qs_bidask[tickerId].put(bidask)
 
-        elif msg.field == 4:
-            # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
-            print("Last Price: " + str(msg))
+            elif msg.field == 4:
+                # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
+                print("Last Price: " + str(msg))
 
         if fieldcode:
             if msg.field == fieldcode:  # Expected cash field code
