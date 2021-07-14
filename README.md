@@ -218,3 +218,6 @@ git branch -vv
   feat/ib/bidask       dcb4c1a Release 1.9.74.123
   feat/ib/rt-bidask    7b366cd [origin/feat/ib/rt-bidask] FEAT: bid/ask stream. on and off. tested live.
   master               9f843b0 [origin/master] MAINT: making things cleaner for testing bid/ask.
+
+## Fetching all remote branches
+for abranch in $(git branch -a | grep -v HEAD | grep remotes | sed "s/remotes\/origin\///g"); do git checkout $abranch ; done
