@@ -205,8 +205,16 @@ git pull
 git push origin -u bt2/original/master
 
 git remote -v
+
+```bt-original     https://github.com/mementum/backtrader.git (fetch)
+bt-original     https://github.com/mementum/backtrader.git (push)
 bt2-original    https://github.com/backtrader2/backtrader.git (fetch)
 bt2-original    https://github.com/backtrader2/backtrader.git (push)
+mementum        https://github.com/mementum/backtrader.git (fetch)
+mementum        https://github.com/mementum/backtrader.git (push)
+origin  git@gitlab.com:algorithmic-trading-library/backtrader.git (fetch)
+origin  git@gitlab.com:algorithmic-trading-library/backtrader.git (push)
+```
 
 git branch -vv
   bt/original/develop  fca15d9 [origin/bt/original/develop] Release 1.9.75.123
