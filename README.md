@@ -1,35 +1,11 @@
-backtrader
-==========
+# backtrader
 
-.. image:: https://img.shields.io/pypi/v/backtrader.svg
-   :alt: PyPi Version
-   :scale: 100%
-   :target: https://pypi.python.org/pypi/backtrader/
-
-..  .. image:: https://img.shields.io/pypi/dm/backtrader.svg
-       :alt: PyPi Monthly Donwloads
-       :scale: 100%
-       :target: https://pypi.python.org/pypi/backtrader/
-
-.. image:: https://img.shields.io/pypi/l/backtrader.svg
-   :alt: License
-   :scale: 100%
-   :target: https://github.com/backtrader/backtrader/blob/master/LICENSE
-.. image:: https://travis-ci.org/backtrader/backtrader.png?branch=master
-   :alt: Travis-ci Build Status
-   :scale: 100%
-   :target: https://travis-ci.org/backtrader/backtrader
-.. image:: https://img.shields.io/pypi/pyversions/backtrader.svg
-   :alt: Python versions
-   :scale: 100%
-   :target: https://pypi.python.org/pypi/backtrader/
-
-**Yahoo API Note**:
+# Yahoo API Note
 
   [2018-11-16] After some testing it would seem that data downloads can be
   again relied upon over the web interface (or API ``v7``)
 
-**Tickets**
+# Tickets
 
   The ticket system is (was, actually) more often than not abused to ask for
   advice about samples.
@@ -63,8 +39,7 @@ Including a full featured chart. Give it a try! This is included in the samples
 as ``sigsmacross/sigsmacross2.py``. Along it is ``sigsmacross.py`` which can be
 parametrized from the command line.
 
-Features:
-=========
+# Features:
 
 Live Trading and backtesting platform written in Python.
 
@@ -100,8 +75,7 @@ Live Trading and backtesting platform written in Python.
   - Trading Calendars
   - Plotting (requires matplotlib)
 
-Documentation
-=============
+# Documentation
 
 The blog:
 
@@ -115,16 +89,14 @@ List of built-in Indicators (122)
 
   - `Indicators Reference <http://www.backtrader.com/docu/indautoref.html>`_
 
-Python 2/3 Support
-==================
+# Python 2/3 Support
 
   - Python >= ``3.2``
 
   - It also works with ``pypy`` and ``pypy3`` (no plotting - ``matplotlib`` is
     not supported under *pypy*)
 
-Installation
-============
+# Installation
 
 ``backtrader`` is self-contained with no external dependencies (except if you
 want to plot)
@@ -156,8 +128,7 @@ From source:
 
   - Place the *backtrader* directory found in the sources inside your project
 
-Version numbering
-=================
+# Version numbering
 
 X.Y.Z.I
 
@@ -168,3 +139,82 @@ X.Y.Z.I
   - Z: Revision version number. To be changed for documentation updates, small
     changes, small bug fixes
   - I: Number of Indicators already built into the platform
+
+## major Branches
+
+* **master**  - Merge from Develop. QA for full integration happens here.
+  Contains the last tested/verified global code integration.
+* **release** - Checkout from Master. Branch based on release & tags. Bug fix in checkout branches,
+  and merge with others.
+* **develop** - Checkout from Master / Pull.Req from Develop. Develop new features, docs ...
+* **bug** - checkout from master and pull.req. OR checkout from release branch and pull.req/Master
+* **features** -  checkout Develop.
+
+## Branch naming conventions
+shall follow that of [GroupName/Info](http://stackoverflow.com/questions/273695/git-branch-naming-best-practices):
+
+1. Use **grouping names** at the beginning of your branch names.
+2. Define and use short **lead tokens** to differentiate branches in a way that is meaningful to your workflow.
+3. Use slashes to separate parts of your branch names.
+4. Do not use bare numbers as leading parts.
+5. Avoid long descriptive names for long-lived branches.
+
+## Grouping Names
+Short and well-defined group names (used to tell you to which part of your workflow each branch belongs):
+`code-block/ text`
+
+- **rc** release candidate
+- **new** major new feature, module
+- **feat** addition of incremental feature/enhancement
+- **bug** Bug fix
+- **junk** Throwaway branch created to experiment
+- **test**
+- **doc** documentation (readme, code comment)
+
+## Commit messages
+
+Standard prefixes to start a commit message: `code-block:: text`
+
+-   **BLD** change related to build
+-   **BUG** bug fix
+-   **DEP** deprecate something, or remove a deprecated object
+-   **DEV** development tool or utility
+-   **DOC** documentation
+-   **ENH** enhancement
+-   **MAINT** maintenance commit (refactoring, typos, etc)
+-   **REV** revert an earlier commit
+-   **STY** style fix (whitespace, PEP8, flake8, etc)
+-   **TST** addition or modification of tests
+-   **REL** related to releasing
+-   **PERF** performance enhancements
+
+
+Some commit style guidelines:
+
+Commit lines should be no longer than `72 characters`__. The first line of the commit should include one of the above prefixes. There should be an empty line between the commit subject and the body of the commit. In general, the message should be in the imperative tense. Best practice is to include not only what the change is, but why the change was made.
+
+__ https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project
+
+
+# Repo Structure
+
+git remote add bt2-original https://github.com/backtrader2/backtrader.git
+git fetch bt2-original master
+git branch –set-upstream-to=bt2-original/master
+git pull
+git push origin -u bt2/original/master
+
+git remote -v
+bt2-original    https://github.com/backtrader2/backtrader.git (fetch)
+bt2-original    https://github.com/backtrader2/backtrader.git (push)
+
+git branch -vv
+  bt/original/develop  fca15d9 [origin/bt/original/develop] Release 1.9.75.123
+  bt/original/master   0fa63ef [origin/bt/original/master] Merge pull request #418 from Larry-u/patch-1
+* bt2/original/develop ef00a78 [origin/bt2/original/develop] Merge branch 'master' of https://github.com/backtrader2/backtrader into bt2/original/master
+  bt2/original/master  ef00a78 [origin/bt2/original/master] Merge branch 'master' of https://github.com/backtrader2/backtrader into bt2/original/master
+  develop              9f843b0 MAINT: making things cleaner for testing bid/ask.
+  development          9f843b0 [origin/development: gone] MAINT: making things cleaner for testing bid/ask.
+  feat/ib/bidask       dcb4c1a Release 1.9.74.123
+  feat/ib/rt-bidask    7b366cd [origin/feat/ib/rt-bidask] FEAT: bid/ask stream. on and off. tested live.
+  master               9f843b0 [origin/master] MAINT: making things cleaner for testing bid/ask.
