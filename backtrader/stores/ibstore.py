@@ -56,12 +56,13 @@ class RTVolume(object):
     constituent fields
 
     Supports using a "price" to simulate an RTVolume from a tickPrice event
+    on 2022.10.11: rtvol = '357.36;8344.0000000000000000;1665499045563;197349.0000000000000000;357.30841548;false'
     '''
     _fields = [
         ('price', float),
-        ('size', int),
+        ('size', float),
         ('datetime', _ts2dt),
-        ('volume', int),
+        ('volume', float),
         ('vwap', float),
         ('single', bool)
     ]
@@ -1044,7 +1045,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 # Lowest price offer on the contract.
                 # Tick Id = 2: https://interactivebrokers.github.io/tws-api/tick_types.html
                 ## print("ask price = %s" % msg.price)
-                print("Ask Price: " + str(msg))
+                #print("Ask Price: " + str(msg))
                 bidask = BidAsk(ask=msg.price, bid=lastbid)
                 self.qs_bidask[tickerId].put(bidask)
 
@@ -1052,13 +1053,14 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 # Highest priced bid for the contract.
                 # Tick Id = 1: https://interactivebrokers.github.io/tws-api/tick_types.html
                 ## print("bid price = %s" % msg.price)
-                print("Bid Price: " + str(msg))
+                #print("Bid Price: " + str(msg))
                 bidask = BidAsk(ask=lastask, bid=msg.price)
                 self.qs_bidask[tickerId].put(bidask)
 
             elif msg.field == 4:
                 # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
-                print("Last Price: " + str(msg))
+                #print("Last Price: " + str(msg))
+                pass
 
         if fieldcode:
             if msg.field == fieldcode:  # Expected cash field code
@@ -1086,10 +1088,12 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # https: // interactivebrokers.github.io / tws - api / tick_types.html
         if msg.field == 0:
             # Bid Size
-            print("Bid Size: " + str(msg))
+            #print("Bid Size: " + str(msg))
+            pass
         elif msg.field == 3:
             # Ask Size
-            print ("Ask Size: " + str(msg))
+            #print ("Ask Size: " + str(msg))
+            pass
         return
 
     @ibregister

@@ -4,6 +4,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import backtrader as bt
 from datetime import datetime
+import pytz as tz
+
 
 # https://medium.com/@danjrod/interactive-brokers-in-python-with-backtrader-23dea376b2fc
 # Very quickly a whooping total of 1082 bars. This is so, because backtrader has done back-filling for us.
@@ -29,7 +31,7 @@ class St(bt.Strategy):
             print("\n\n Current Time =", current_time)
 
             # cannot be after the for-loop as this is where we turn it off
-            if not self.broker.ib.get_bidask_streamstatus():
+            if not self.broker.ib.get_bidask_streamstatus():# and self.runtime == (15 or 10 or 5):
                 print("activating bid/ask streaming")
                 self.broker.ib.stream_bidask(True)
 
@@ -57,11 +59,9 @@ class St(bt.Strategy):
                     print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
                     print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue)))
 
-                    print("removing bid/ask streaming")
+                    # print("removing bid/ask streaming")
                     # tickerID = self.datas[0].ib.REQIDBASE
-                    self.broker.ib.stream_bidask(
-                        state=False, tickerId=self.datas[self.getdatanames().index(asset)].bidasklive['tickerId']
-                    )
+                    # self.broker.ib.stream_bidask(state=False, tickerId=self.datas[self.getdatanames().index(asset)].bidasklive['tickerId'])
                 except Exception as e:
                     print(e)
                     print("error requesting bid/ask price")
@@ -110,8 +110,30 @@ class St(bt.Strategy):
 
 
 def run(args=None):
+    tz_default = tz.timezone('America/New_York')
+
+    datakwargs = dict(
+        backfill_start=False,
+        backfill=False,
+        timeframe=bt.TimeFrame.Ticks,
+        rtbar=True,
+        tz=tz_default,
+        latethrough=False,
+        _debug=False
+    )
+    # timeframe=bt.TimeFrame.Ticks, compression=datacomp,
+    # historical=args.historical, fromdate=fromdate,
+    # rtbar=True,
+    # qcheck=0.01,
+    # what=args.what, # specific price type for historical requests (default:None)
+    # latethrough=args.latethrough,
+
+    rekwargs = dict(
+        timeframe=bt.TimeFrame.Seconds, compression=10
+    )
+
     cerebro = bt.Cerebro(stdstats=False)
-    store = bt.stores.IBStore(port=7496)
+    store = bt.stores.IBStore(port=4001)
     # this lines does the magic of switching from broker simulation, to live trading on IB
     cerebro.broker = store.getbroker()
 
@@ -134,8 +156,8 @@ def run(args=None):
         # Create the Data Feed for Cerebro
         ib_symbol = symbol + ib_name
         print(" Registering dataname: " + ib_symbol)
-        data = store.getdata(dataname=ib_symbol, timeframe=bt.TimeFrame.Ticks)
-        cerebro.resampledata(data, timeframe=bt.TimeFrame.Seconds, compression=10, name=symbol)
+        data = store.getdata(dataname=ib_symbol, **datakwargs)
+        cerebro.resampledata(data, name=symbol, **rekwargs)
 
     cerebro.addstrategy(St)
     cerebro.run()
