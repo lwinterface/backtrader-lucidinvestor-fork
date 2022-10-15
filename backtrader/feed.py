@@ -423,6 +423,12 @@ class AbstractDataBase(with_metaclass(MetaAbstractDataBase,
             if self.lines.datetime[0] > datamaster.lines.datetime[0]:
                 # can't deliver new bar, too early, go back
                 self.rewind()
+
+                # Correcting Bug __len__() should return >= 0 on liveFeed
+                # This needs to be added since bar is not delivered
+                # ref: https://community.backtrader.com/topic/1367/error-__len__-should-return-0-on-livefeed/5
+                # ref: https://github.com/vladisld/backtrader/commit/6dfe97b397cbddcb243a12a28afc72c7ff46e287
+                return False
             else:
                 if ticks:
                     self._tick_fill()

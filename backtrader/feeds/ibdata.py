@@ -22,6 +22,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import datetime
+import sys
 
 import backtrader as bt
 from backtrader.feed import DataBase
@@ -117,6 +118,18 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
 
         Check the IB API docs if another value is wished
 
+      - ``bidask`` (default: ``False``)
+        If ``True`` the bidask stream will be queued and accessible
+
+      - ``bypass_warmup`` (default: ``False``)
+        If ``True`` the price feed will be immediately initialised with the last_price received just after
+        a successful reqMktData connection. Once a proper RTVolume instance is received it will replace
+        the initial last_price for consistency guarantees as vwap, size ... are missing.
+
+        This is useful for live trading involving thinly traded or illiquid stocks
+
+        USE AT YOUR OWN RISK
+
       - ``rtbar`` (default: ``False``)
 
         If ``True`` the ``5 Seconds Realtime bars`` provided by Interactive
@@ -197,6 +210,8 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         ('sectype', 'STK'),  # usual industry value
         ('exchange', 'SMART'),  # usual industry value
         ('currency', ''),
+        ('bidask', False),  # store bid/ask tickPrice (msg.field={1,2}). Cannot be used with rtbar=True
+        ('bypass_warmup', False),  # does not wait for warmup or proper RTVolume instance to trigger LIVE notification
         ('rtbar', False),  # use RealTime 5 seconds bars
         ('historical', False),  # only historical download
         ('what', None),  # historical - what to show
@@ -349,6 +364,10 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         self.bidasklive = None
         self.qhist = None
 
+        if self.p.rtbar and self.p.bidask:
+            return sys.exit('ERROR. bid/ask streams (bidask=True) cannot be activated with mode RealTime bars '
+                            '(rtbar=True) because IB.reqRealTimeBars returns only OHLC data.')
+
         self._usertvol = not self.p.rtbar
         tfcomp = (self._timeframe, self._compression)
         if tfcomp < self.RTBAR_MINSIZE:
@@ -419,11 +438,13 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
             return
 
         if self._usertvol:
-            self.qlive, self.bidasklive = self.ib.reqMktData(self.contract)
+            self.qlive, self.bidlive, self.asklive = self.ib.reqMktData(self.contract,
+                                                                        bypass_warmup=self.p.bypass_warmup,
+                                                                        bidask=self.p.bidask)
         else:
-            self.qlive, self.bidasklive = self.ib.reqRealTimeBars(self.contract)
+            self.qlive, self.bidlive, self.asklive = self.ib.reqRealTimeBars(self.contract)
 
-        return self.qlive, self.bidasklive
+        return self.qlive, self.bidlive, self.asklive
 
     def canceldata(self):
         '''Cancels Market Data subscription, checking asset type and rtbar'''
@@ -451,7 +472,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
                     if True:
                         return None
 
-                # Code invalidated until further checking is done
+                    # Code invalidated until further checking is done
                     if not self._statelivereconn:
                         return None  # indicate timeout situation
 

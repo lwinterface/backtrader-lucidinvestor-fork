@@ -18,50 +18,49 @@ class St(bt.Strategy):
         # nb of next_live run before clean shutdown
         self.runtime = 20
 
+    def prenext(self):
+        '''
+        hook to let developers access things before the following guarantee can be met:
+            - guarantee: all buffers (indicators, data feeds) can deliver at least data point
+            - alternative: see https://www.backtrader.com/blog/2019-05-20-momentum-strategy/momentum-strategy/
+        :return:
+        '''
+
+        print(" [prenext] cash = " + str(self.broker.getcash()))
+        print(" [prenext] portfolio allocation = " + str(self.get_total_portfolio_allocation()))
+
     def next(self):
-
-
-
-        #print(" cash = " + str(self.broker.getcash()))
-        #print (" portfolio allocation = " +str(self.get_total_portfolio_allocation() ))
 
         if self.data_live:
             now = datetime.now()
             current_time = now.strftime("%H:%M:%S")
             print("\n\n Current Time =", current_time)
 
-            # cannot be after the for-loop as this is where we turn it off
-            if not self.broker.ib.get_bidask_streamstatus():# and self.runtime == (15 or 10 or 5):
-                print("activating bid/ask streaming")
-                self.broker.ib.stream_bidask(True)
-
             for asset in self.getdatanames():
-            #asset = self.getdatanames()[0]
-
-                print("\n ASSET: " +str(asset))
+                print("\n ASSET: " + str(asset))
 
                 q = self.datas[self.getdatanames().index(asset)].qlive.queue
                 print(str(asset) + "/ Close price: " + str(self.datas[self.getdatanames().index(asset)].close[0]))
-                print(str(asset)+ "/ len qlive: " +str(len(q)))
+                print(str(asset) + "/ len qlive: " + str(len(q)))
                 try:
-                    print("\n"+ str(asset) +": price - " + str(q[-1].price))
-                    print(str(asset)+": vwap - " + str(q[-1].vwap))
+                    print("\n" + str(asset) + ": price - " + str(q[-1].price))
+                    print(str(asset) + ": vwap - " + str(q[-1].vwap))
                 except Exception as e:
                     print(e)
                     print(q)
 
                 try:
-                    print(str(asset) + "/ len bidasklive['queue']: " + str(len(
-                        self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue)
-                    ))
-                    ask = self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue[-1].ask
-                    bid = self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue[-1].bid
-                    print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)) )
-                    print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].bidasklive['queue'].queue)))
+                    ask = self.datas[self.getdatanames().index(asset)].asklive['queue'].queue[-1].price
+                    bid = self.datas[self.getdatanames().index(asset)].bidlive['queue'].queue[-1].price
+                    print(" last ask price is: " + str(float(ask)) + " last bid price is: " + str(float(bid)))
+                    print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].asklive['queue'].queue)))
+                    print(" len bid: " + str(len(self.datas[self.getdatanames().index(asset)].bidlive['queue'].queue)))
 
-                    # print("removing bid/ask streaming")
-                    # tickerID = self.datas[0].ib.REQIDBASE
-                    # self.broker.ib.stream_bidask(state=False, tickerId=self.datas[self.getdatanames().index(asset)].bidasklive['tickerId'])
+                    if self.runtime == 5:
+                        # clear bid/ask stream and stop queueing
+                        print("STOP BID/ASK - clear bid/ask stream and stop queueing")
+                        self.broker.ib.stream_bidask_stop()
+
                 except Exception as e:
                     print(e)
                     print("error requesting bid/ask price")
@@ -116,17 +115,13 @@ def run(args=None):
         backfill_start=False,
         backfill=False,
         timeframe=bt.TimeFrame.Ticks,
-        rtbar=True,
+        bidask=False,
+        bypass_warmup=True,
+        rtbar=False,  # if set to True no bid/ask
         tz=tz_default,
         latethrough=False,
         _debug=False
     )
-    # timeframe=bt.TimeFrame.Ticks, compression=datacomp,
-    # historical=args.historical, fromdate=fromdate,
-    # rtbar=True,
-    # qcheck=0.01,
-    # what=args.what, # specific price type for historical requests (default:None)
-    # latethrough=args.latethrough,
 
     rekwargs = dict(
         timeframe=bt.TimeFrame.Seconds, compression=10
@@ -137,17 +132,8 @@ def run(args=None):
     # this lines does the magic of switching from broker simulation, to live trading on IB
     cerebro.broker = store.getbroker()
 
-    '''
-    symbols = ["SPY-STK-SMART-USD", "TLT-STK-SMART-USD"]
-
-    data = store.getdata(dataname='SPY-STK-SMART-USD', timeframe=bt.TimeFrame.Ticks)    
-    cerebro.resampledata(data, timeframe=bt.TimeFrame.Seconds, compression=10, name='SPY')
-    # https://www.backtrader.com/docu/live/ib/ib.html - check whether this is necessary; maybe resampledata adds it already
-    # cerebro.adddata(data)
-    '''
-
     ib_name = '-STK-SMART-USD'
-    assets = ['SPY']
+    assets = ['GSY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.
