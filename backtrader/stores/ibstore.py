@@ -249,8 +249,8 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         self._stream_bidask = False  # capture bid/ask or not
         self._bypass_warmup = False  # do we wait for a proper RTVolume instance to trigger LIVE notification
-        self.bypass_warmup = []  # used to notify bypass at the tickerID level
-        self._init_lastprice = []  # used to notify initial last_price used as first data point in price feed at tickerId level
+        self.bypass_warmup = dict()  # used to notify bypass at the tickerID level
+        self._init_lastprice = dict()  # used to notify initial last_price used as first data point in price feed at tickerId level
 
         # Structures to hold datas requests
         self.qs = collections.OrderedDict()  # key: tickerId -> queues
@@ -639,39 +639,30 @@ class IBStore(with_metaclass(MetaSingleton, object)):
     def getTickerQueue(self, start=False):
         '''Creates ticker/Queue for data delivery to a data feed'''
         q = queue.Queue()
-
-        if self._stream_bidask:
-            # Insertion will block once this size has been reached, until queue items are consumed or queue is cleared
-            q_bid = queue.Queue(maxsize=100)
-            q_ask = queue.Queue(maxsize=100)
+        # Insertion will block once this size has been reached, until queue items are consumed or queue is cleared
+        q_bid = queue.Queue(maxsize=100)
+        q_ask = queue.Queue(maxsize=100)
 
         if start:
             q.put(None)
-            if self._stream_bidask:
-                q_bid.put(None)
-                q_ask.put(None)
-                return q, q_bid, q_ask
-            else:
-                return q
+            q_bid.put(None)
+            q_ask.put(None)
+            return q, q_bid, q_ask
 
         with self._lock_q:
             tickerId = self.nextTickerId()
             self.qs[tickerId] = q  # can be managed from other thread
             self.ts[q] = tickerId
             self.iscash[tickerId] = False
+            self.qs_bid[tickerId] = q_bid
+            self.qs_ask[tickerId] = q_ask
 
             if self._bypass_warmup:
                 self.bypass_warmup[tickerId] = True
                 self._init_lastprice[tickerId] = False
 
-            if self._stream_bidask:
-                self.qs_bid[tickerId] = q_bid
-                self.qs_ask[tickerId] = q_ask
+        return tickerId, q, q_bid, q_ask
 
-        if self._stream_bidask:
-            return tickerId, q, q_bid, q_ask
-        else:
-            return tickerId, q
 
     def cancelQueue(self, q, sendnone=False):
         '''Cancels a Queue for data delivery'''
@@ -869,12 +860,14 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         :param tickerId:
         :return: None
         '''
-        self._stream_bidask = False
 
-        for q_ticker in self.qs_bid:
-            self.qs_bid[q_ticker].queue.clear()
-        for q_ticker in self.qs_ask:
-            self.qs_ask[q_ticker].queue.clear()
+        if  self._stream_bidask:
+            self._stream_bidask = False
+
+            for q_ticker in self.qs_bid:
+                self.qs_bid[q_ticker].queue.clear()
+            for q_ticker in self.qs_ask:
+                self.qs_ask[q_ticker].queue.clear()
 
         return
 
@@ -1021,7 +1014,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             # https://www.interactivebrokers.com/en/software/tws/usersguidebook/mosaic/timensales.htm
             # There is a new setting available starting in TWS v969 which displays tick-by-tick data in the TWS Time &
             # Sales Window. If this setting is checked, it will provide a higher granularity of data than RTVolume.
-            print('String' + str(msg))
+            # print('String' + str(msg))
 
             try:
                 rtvol = RTVolume(msg.value)
@@ -1032,11 +1025,16 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 # form in the message
                 self.qs[msg.tickerId].put(rtvol)
 
-                if self.bypass_warmup[msg.tickerId] and self._init_lastprice[msg.tickerId]:
-                    # remove the initial last_price (without size, vwap ...) for consistency guarantee
-                    self.qs[msg.tickerId].get()
+                if self._bypass_warmup and self.bypass_warmup[msg.tickerId] and self._init_lastprice[msg.tickerId]:
+
+                    # if tickPrice came in first, then len() would be 2, but if tickString came first, then len() is 1.
+                    # if len() is 1, no action, the stream is already consistent (not a thinly traded or illiquid stock)
+                    if len(self.qs.items()[0][1].queue) == 2:
+                        # remove the initial last_price (without size, vwap ...) for consistency guarantee
+                        self.qs[msg.tickerId].get()
                     # stop any other manipulation on self.qs[msg.tickerId]
                     self.bypass_warmup[msg.tickerId] = False
+                    self._init_lastprice[msg.tickerId] = False
 
     @ibregister
     def tickPrice(self, msg):
@@ -1051,8 +1049,11 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         tracking of the price is done (industry de-facto standard at least with
         the IB API) following the BID price
 
-        A RTVolume which will only contain a price is put into the client's
-        queue to have a consistent cross-market interface
+        Whenever a certain property changes, a new tick event will be triggered. BUT if bid and ask remains, and
+        only size is changing, only size will be updated and nothing else will be streamed (i.e. NO tickPrice emitted).
+        -> Thus the bypass_warmup for thinly traded or illiquid stocks. A RTVolume which will only contain a price
+        is put into the client's queue to have a consistent cross-market interface, then replaced using the next
+        valid RTVolume emitted as tickString (below)
         '''
 
         # print('Price' + str(msg))
@@ -1096,7 +1097,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # BYPASSING WARMUP PERIOD USING LAST_TRADE PRICE DELIVERED UPON SUCCESSFUL reqMarketData CONNECTION
         # for thinly or illiquid stock, capture ONLY ONCE the last_price, bid and ask upon initial successful
         # reqMktData connection.
-        if self.bypass_warmup[msg.tickerId] and not self._init_lastprice[msg.tickerId] and msg.field == 4:
+        if self._bypass_warmup and self.bypass_warmup[msg.tickerId] and not self._init_lastprice[msg.tickerId] and msg.field == 4:
             # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
             # print("Last Price: " + str(msg))
             fakertvol = RTVolume(price=msg.price, tmoffset=self.tmoffset)
@@ -1123,17 +1124,24 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
     @ibregister
     def tickSize(self, msg):
+        '''
+        Whenever a certain property changes, a new tick event will be triggered. So if bid and ask remains, and
+        only size is changing, only size will be updated and nothing else will be streamed.
+        Thus the bypass_warmup for thinly traded or illiquid stocks.
+        :param msg:
+        :return:
+        '''
         if not self._stream_bidask:
             return
 
         # https: // interactivebrokers.github.io / tws - api / tick_types.html
         if msg.field == 0:
             # Bid Size
-            print("Bid Size: " + str(msg))
+            #print("Bid Size: " + str(msg))
             pass
         elif msg.field == 3:
             # Ask Size
-            print("Ask Size: " + str(msg))
+            #print("Ask Size: " + str(msg))
             pass
         return
 

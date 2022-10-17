@@ -360,7 +360,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         contractdetails if it exists'''
         super(IBData, self).start()
         # Kickstart store and get queue to wait on
-        self.qlive = self.ib.start(data=self)
+        self.qlive, self.bidlive, self.asklive = self.ib.start(data=self)
         self.bidasklive = None
         self.qhist = None
 

@@ -35,6 +35,8 @@ class St(bt.Strategy):
             now = datetime.now()
             current_time = now.strftime("%H:%M:%S")
             print("\n\n Current Time =", current_time)
+            print(" cash = " + str(self.broker.getcash()))
+            print(" portfolio allocation = " + str(self.get_total_portfolio_allocation()))
 
             for asset in self.getdatanames():
                 print("\n ASSET: " + str(asset))
@@ -56,16 +58,18 @@ class St(bt.Strategy):
                     print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].asklive['queue'].queue)))
                     print(" len bid: " + str(len(self.datas[self.getdatanames().index(asset)].bidlive['queue'].queue)))
 
-                    if self.runtime == 5:
+                    '''
+                    if self.runtime == 18:
                         # clear bid/ask stream and stop queueing
                         print("STOP BID/ASK - clear bid/ask stream and stop queueing")
                         self.broker.ib.stream_bidask_stop()
+                    '''
 
                 except Exception as e:
                     print(e)
                     print("error requesting bid/ask price")
 
-            self.runtime = self.runtime - 1
+            #self.runtime = self.runtime - 1 # <-- just to test. re-enable prior to commit.
 
             if self.runtime < 1:
                 self.env.runstop()
@@ -96,6 +100,10 @@ class St(bt.Strategy):
         cash_total = self.broker.ib.acc_upds[accountid].CashBalance.BASE
         cash_notconverted = cash_total - cash_usd
 
+        print("cash_usd: " + str(cash_usd))
+        print("cash_total: " + str(cash_total))
+        print("cash_notconverted (in BASE): " + str(cash_notconverted))
+
         cash_totalreserve = cash_usdsecurity + cash_notconverted
         if cash_totalreserve < min_costs + cash_notconverted:
             cash_totalreserve = min_costs + cash_notconverted
@@ -115,7 +123,7 @@ def run(args=None):
         backfill_start=False,
         backfill=False,
         timeframe=bt.TimeFrame.Ticks,
-        bidask=False,
+        bidask=True,
         bypass_warmup=True,
         rtbar=False,  # if set to True no bid/ask
         tz=tz_default,
@@ -133,7 +141,7 @@ def run(args=None):
     cerebro.broker = store.getbroker()
 
     ib_name = '-STK-SMART-USD'
-    assets = ['GSY']
+    assets = ['SPY', 'GSY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.
