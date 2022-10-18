@@ -121,7 +121,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
       - ``bidask`` (default: ``False``)
         If ``True`` the bidask stream will be queued and accessible
 
-      - ``bypass_warmup`` (default: ``False``)
+      - ``initial_tickPrice`` (default: ``False``)
         If ``True`` the price feed will be immediately initialised with the last_price received just after
         a successful reqMktData connection. Once a proper RTVolume instance is received it will replace
         the initial last_price for consistency guarantees as vwap, size ... are missing.
@@ -211,7 +211,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         ('exchange', 'SMART'),  # usual industry value
         ('currency', ''),
         ('bidask', False),  # store bid/ask tickPrice (msg.field={1,2}). Cannot be used with rtbar=True
-        ('bypass_warmup', False),  # does not wait for warmup or proper RTVolume instance to trigger LIVE notification
+        ('initial_tickPrice', False),  # does not wait for warmup or proper RTVolume instance to trigger LIVE notification
         ('rtbar', False),  # use RealTime 5 seconds bars
         ('historical', False),  # only historical download
         ('what', None),  # historical - what to show
@@ -439,7 +439,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
 
         if self._usertvol:
             self.qlive, self.bidlive, self.asklive = self.ib.reqMktData(self.contract,
-                                                                        bypass_warmup=self.p.bypass_warmup,
+                                                                        initial_tickPrice=self.p.initial_tickPrice,
                                                                         bidask=self.p.bidask)
         else:
             self.qlive, self.bidlive, self.asklive = self.ib.reqRealTimeBars(self.contract)

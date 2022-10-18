@@ -80,7 +80,7 @@ def run(args=None):
         backfill=False,
         timeframe=bt.TimeFrame.Ticks,
         bidask=True,
-        bypass_warmup=True,
+        initial_tickPrice=True,
         rtbar=False,  # if set to True no bid/ask
         tz=tz_default,
         latethrough=False,
@@ -97,7 +97,7 @@ def run(args=None):
     cerebro.broker = store.getbroker()
 
     ib_name = '-STK-SMART-USD'
-    assets = ['SPY', 'GSY']
+    assets = ['GSY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.

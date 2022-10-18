@@ -250,8 +250,8 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         self.tmoffset = timedelta()  # to control time difference with server
 
         self._stream_bidask = False  # capture bid/ask or not
-        self._bypass_warmup = False  # do we wait for a proper RTVolume instance to trigger LIVE notification
-        self.bypass_warmup = dict()  # used to notify bypass at the tickerID level
+        self._use_initial_tickPrice = False  # do we wait for a proper RTVolume instance to trigger LIVE notification
+        self.initial_tickPrice = dict()  # used to notify tickPrice at the tickerID level
         self._init_lastprice = dict()  # used to notify initial last_price used as first data point in price feed at tickerId level
 
         # Structures to hold datas requests
@@ -659,8 +659,8 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             self.qs_bid[tickerId] = q_bid
             self.qs_ask[tickerId] = q_ask
 
-            if self._bypass_warmup:
-                self.bypass_warmup[tickerId] = True
+            if self._use_initial_tickPrice:
+                self.initial_tickPrice[tickerId] = True
                 self._init_lastprice[tickerId] = False
 
         return tickerId, q, q_bid, q_ask
@@ -927,7 +927,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
             self.cancelQueue(q, True)
 
-    def reqMktData(self, contract, bypass_warmup=False, bidask=False, what=None):
+    def reqMktData(self, contract, initial_tickPrice=False, bidask=False, what=None):
         ''' Requests real time market data. Returns market data for an instrument either in real time or 10-15 minutes
         delayed (depending on the market data type specified)
 
@@ -942,7 +942,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         '''
 
         self._stream_bidask = bidask
-        self._bypass_warmup = bypass_warmup
+        self._use_initial_tickPrice = initial_tickPrice
 
         # get a ticker/queue for identification/data delivery
         # the bid/ask price is part of the default dataset returned
@@ -1027,7 +1027,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 # form in the message
                 self.qs[msg.tickerId].put(rtvol)
 
-                if self._bypass_warmup and self.bypass_warmup[msg.tickerId] and self._init_lastprice[msg.tickerId]:
+                if self._use_initial_tickPrice and self.initial_tickPrice[msg.tickerId] and self._init_lastprice[msg.tickerId]:
 
                     # if tickPrice came in first, then len() would be 2, but if tickString came first, then len() is 1.
                     # if len() is 1, no action, the stream is already consistent (not a thinly traded or illiquid stock)
@@ -1035,7 +1035,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                         # remove the initial last_price (without size, vwap ...) for consistency guarantee
                         self.qs[msg.tickerId].get()
                     # stop any other manipulation on self.qs[msg.tickerId]
-                    self.bypass_warmup[msg.tickerId] = False
+                    self.initial_tickPrice[msg.tickerId] = False
                     self._init_lastprice[msg.tickerId] = False
 
     @ibregister
@@ -1065,7 +1065,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         fieldcode = self.iscash[tickerId]
 
         try:
-            if msg.price == -1:
+            if msg.price <= 0:
                 print("no data currently available. Most commonly this occurs when requesting data from markets that "
                       "are closed. It can also occur for infrequently trading instruments which do not have open bids "
                       "or offers at that time of the request. "
@@ -1109,7 +1109,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # BYPASSING WARMUP PERIOD USING LAST_TRADE PRICE DELIVERED UPON SUCCESSFUL reqMarketData CONNECTION
         # for thinly or illiquid stock, capture ONLY ONCE the last_price, bid and ask upon initial successful
         # reqMktData connection.
-        if self._bypass_warmup and self.bypass_warmup[msg.tickerId] and not self._init_lastprice[msg.tickerId] and msg.field == 4:
+        if self._use_initial_tickPrice and self.initial_tickPrice[msg.tickerId] and not self._init_lastprice[msg.tickerId] and msg.field == 4:
             # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
             # print("Last Price: " + str(msg))
             fakertvol = RTVolume(price=msg.price, tmoffset=self.tmoffset)
@@ -1119,7 +1119,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         if fieldcode:
             if msg.field == fieldcode:  # Expected cash field code
                 try:
-                    if msg.price == -1.0:
+                    if msg.price <= 0:
                         # seems to indicate the stream is halted for example in
                         # between 23:00 - 23:15 CET for FOREX
                         return
