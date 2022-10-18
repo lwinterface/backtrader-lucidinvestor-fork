@@ -25,10 +25,12 @@ import collections
 from copy import copy
 from datetime import date, datetime, timedelta
 import inspect
+import bisect
 import itertools
 import random
 import threading
 import time
+import logging
 
 from ib.ext.Contract import Contract
 import ib.opt as ibopt
@@ -52,12 +54,12 @@ def _ts2dt(tstamp=None):
 
 
 class RTVolume(object):
-    '''Parses a tickString tickType 48 (RTVolume) event from the IB API into its
+    """Parses a tickString tickType 48 (RTVolume) event from the IB API into its
     constituent fields
 
     Supports using a "price" to simulate an RTVolume from a tickPrice event
     on 2022.10.11: rtvol = '357.36;8344.0000000000000000;1665499045563;197349.0000000000000000;357.30841548;false'
-    '''
+    """
     _fields = [
         ('price', float),
         ('size', float),
@@ -1058,10 +1060,21 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         # print('Price' + str(msg))
         # Used for "CASH" markets
-        # The price field has been seen to be missing in some instances even if
-        # "field" is 1
+        # The price field has been seen to be missing in some instances even if "field" is 1
         tickerId = msg.tickerId
         fieldcode = self.iscash[tickerId]
+
+        try:
+            if msg.price == -1:
+                print("no data currently available. Most commonly this occurs when requesting data from markets that "
+                      "are closed. It can also occur for infrequently trading instruments which do not have open bids "
+                      "or offers at that time of the request. "
+                      "REF https://interactivebrokers.github.io/tws-api/md_receive.html")
+                return
+
+        except ValueError as e:  # price not in message ...
+            logging.error('[tickPrice] price not in message ... ' + str(e))
+            return
 
         # if self._stream_bidask or not len(self.qs[tickerId].queue):
         if self._stream_bidask:
@@ -1086,7 +1099,6 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 # Highest priced bid for the contract.
                 # Tick Id = 1: https://interactivebrokers.github.io/tws-api/tick_types.html
                 # print("Bid Price: " + str(msg))
-
                 bidask = BidAsk(price=msg.price)
                 self.qs_bid[tickerId].put(bidask)
 
@@ -1436,7 +1448,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         else:
             checkdur = duration
 
-        sizes = self._durations[checkduration]
+        sizes = self._durations[checkdur]
         return duration, sizes
 
     def calcduration(self, dtbegin, dtend):
