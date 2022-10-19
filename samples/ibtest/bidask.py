@@ -49,7 +49,7 @@ class St(bt.Strategy):
                     print(" len ask: " + str(len(self.datas[self.getdatanames().index(asset)].asklive['queue'].queue)))
                     print(" len bid: " + str(len(self.datas[self.getdatanames().index(asset)].bidlive['queue'].queue)))
 
-                    if self.runtime < self.runtime/2:
+                    if self.runtime < 5:
                         # clear bid/ask stream and stop queueing
                         print("STOP BID/ASK - clear bid/ask stream and stop queueing.")
                         self.broker.ib.stream_bidask_stop()
