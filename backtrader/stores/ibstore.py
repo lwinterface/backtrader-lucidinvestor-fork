@@ -1030,7 +1030,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                 if self._use_initial_tickPrice and self.initial_tickPrice[msg.tickerId] and self._init_lastprice[msg.tickerId]:
 
                     # if tickPrice came in first, then len() would be 2, but if tickString came first, then len() is 1.
-                    # if len() is 1, no action, the stream is already consistent (not a thinly traded or illiquid stock)
+                    # if len() is 1, no action, the stream is already consistent (did not use tickPrice partial info)
                     if len(self.qs.items()[0][1].queue) == 2:
                         # remove the initial last_price (without size, vwap ...) for consistency guarantee
                         self.qs[msg.tickerId].get()
@@ -1053,8 +1053,10 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         Whenever a certain property changes, a new tick event will be triggered. BUT if bid and ask remains, and
         only size is changing, only size will be updated and nothing else will be streamed (i.e. NO tickPrice emitted).
-        -> Thus the bypass_warmup for thinly traded or illiquid stocks. A RTVolume which will only contain a price
-        is put into the client's queue to have a consistent cross-market interface, then replaced using the next
+        -> some stocks (like GSY invesco ultra short used for testing) would have a very low bid/ask price movement,
+        and thus would not trigger tickPrice or RTVolume quickly and would delay LIVE NOTIFICATION.
+        -> considering backtrader is using RTVolume a consistent cross-market interface, we temporarily use a
+        RTVolume instance with last_price information only, put it into the client's queue, then replace using the next
         valid RTVolume emitted as tickString (below)
         '''
 
@@ -1106,9 +1108,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                     for i in range(int(self.qs_bid[tickerId].maxsize / 2)):
                         self.qs_bid[tickerId].get()
 
-        # BYPASSING WARMUP PERIOD USING LAST_TRADE PRICE DELIVERED UPON SUCCESSFUL reqMarketData CONNECTION
-        # for thinly or illiquid stock, capture ONLY ONCE the last_price, bid and ask upon initial successful
-        # reqMktData connection.
+        # USE LAST_TRADE PRICE DELIVERED UPON SUCCESSFUL reqMarketData CONNECTION to trigger LIVE NOTIFICATION
         if self._use_initial_tickPrice and self.initial_tickPrice[msg.tickerId] and not self._init_lastprice[msg.tickerId] and msg.field == 4:
             # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
             # print("Last Price: " + str(msg))
@@ -1139,7 +1139,6 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         '''
         Whenever a certain property changes, a new tick event will be triggered. So if bid and ask remains, and
         only size is changing, only size will be updated and nothing else will be streamed.
-        Thus the bypass_warmup for thinly traded or illiquid stocks.
         :param msg:
         :return:
         '''

@@ -126,7 +126,8 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         a successful reqMktData connection. Once a proper RTVolume instance is received it will replace
         the initial last_price for consistency guarantees as vwap, size ... are missing.
 
-        This is useful for live trading involving thinly traded or illiquid stocks
+        -> some stocks (like GSY invesco ultra short used for testing) would have a very low bid/ask price movement,
+        and thus would not trigger tickPrice or RTVolume quickly and would delay LIVE NOTIFICATION.
 
         USE AT YOUR OWN RISK
 
@@ -211,7 +212,7 @@ class IBData(with_metaclass(MetaIBData, DataBase)):
         ('exchange', 'SMART'),  # usual industry value
         ('currency', ''),
         ('bidask', False),  # store bid/ask tickPrice (msg.field={1,2}). Cannot be used with rtbar=True
-        ('initial_tickPrice', False),  # does not wait for warmup or proper RTVolume instance to trigger LIVE notification
+        ('initial_tickPrice', False),  # use initial tickPrice last_price to trigger LIVE notification
         ('rtbar', False),  # use RealTime 5 seconds bars
         ('historical', False),  # only historical download
         ('what', None),  # historical - what to show

@@ -30,6 +30,7 @@ with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 # Package name
 pname = 'backtrader'
+lucid_name = pname + '-lucidinvestor'
 
 # Get the version ... execfile is only on Py2 ... use exec + compile + open
 vname = 'version.py'
@@ -37,18 +38,18 @@ with open(os.path.join(pname, vname)) as f:
     exec(compile(f.read(), vname, 'exec'))
 
 # Generate links
-gurl = 'https://github.com/mementum/' + pname
+gurl = 'https://gitlab.com/algorithmic-trading-library/' + pname
 gdurl = gurl + '/tarball/' + __version__
 
 setuptools.setup(
-    name=pname,
+    name=lucid_name,
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     version=__version__,
 
-    description='BackTesting Engine',
+    description='BackTesting Engine - maintained by LucidInvestor',
     long_description=long_description,
 
     # The project's main homepage.
@@ -56,8 +57,8 @@ setuptools.setup(
     download_url=gdurl,
 
     # Author details
-    author='Daniel Rodriguez',
-    author_email='danjrod@gmail.com',
+    author='maintainer: LucidInvestor - original: Daniel Rodriguez (danjrod@gmail.com)',
+    author_email='info@lucidinvestor.ca',
 
     # Choose your license
     license='GPLv3+',
@@ -72,7 +73,7 @@ setuptools.setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
-        'Intended Audience :: Financial and Insurance Industry',
+        'Intended Audience :: Do-It-Yourself Investor',
 
         # Indicate which Topics are covered by the package
         'Topic :: Software Development',

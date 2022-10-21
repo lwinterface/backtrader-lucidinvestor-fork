@@ -56,7 +56,7 @@ class St(bt.Strategy):
 
                 except Exception as e:
                     print(e)
-                    print("error requesting bid/ask price")
+                    print("error requesting bid/ask price (or bid/ask stream has been stopped)")
 
             self.runtime = self.runtime - 1
 
@@ -96,8 +96,10 @@ def run(args=None):
     # this lines does the magic of switching from broker simulation, to live trading on IB
     cerebro.broker = store.getbroker()
 
+    # -> some stocks (like GSY invesco ultra short used for testing) would have a very low bid/ask price movement,
+    # and thus would not trigger tickPrice or RTVolume quickly and would delay LIVE NOTIFICATION.
     ib_name = '-STK-SMART-USD'
-    assets = ['GSY']
+    assets = ['GSY', 'SPY']
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.

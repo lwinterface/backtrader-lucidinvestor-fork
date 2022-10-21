@@ -1,3 +1,8 @@
+1.9.76.124:
+  - new maintainer (https://gitlab.com/algorithmic-trading-library/backtrader)
+  - add option to stream bid/ask prices
+  - add option to use tickPrice to initialize data upon successful reqMarketData connection
+
 1.9.76.123:
   - PR#405 Fix initial Renko bricks
   - Add option to select fixing of initial Renko bricks
