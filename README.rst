@@ -206,26 +206,31 @@ git push origin -u bt2/original/master
 
 git remote -v
 
-```bt-original     https://github.com/mementum/backtrader.git (fetch)
-bt-original     https://github.com/mementum/backtrader.git (push)
-bt2-original    https://github.com/backtrader2/backtrader.git (fetch)
-bt2-original    https://github.com/backtrader2/backtrader.git (push)
-mementum        https://github.com/mementum/backtrader.git (fetch)
-mementum        https://github.com/mementum/backtrader.git (push)
-origin  git@gitlab.com:algorithmic-trading-library/backtrader.git (fetch)
-origin  git@gitlab.com:algorithmic-trading-library/backtrader.git (push)
-```
+
+    bt-original     https://github.com/mementum/backtrader.git (fetch)
+    bt-original     https://github.com/mementum/backtrader.git (push)
+    bt2-original    https://github.com/backtrader2/backtrader.git (fetch)
+    bt2-original    https://github.com/backtrader2/backtrader.git (push)
+    mementum        https://github.com/mementum/backtrader.git (fetch)
+    mementum        https://github.com/mementum/backtrader.git (push)
+    origin  git@gitlab.com:algorithmic-trading-library/backtrader.git (fetch)
+    origin  git@gitlab.com:algorithmic-trading-library/backtrader.git (push)
+
 
 git branch -vv
-  bt/original/develop  fca15d9 [origin/bt/original/develop] Release 1.9.75.123
-  bt/original/master   0fa63ef [origin/bt/original/master] Merge pull request #418 from Larry-u/patch-1
-* bt2/original/develop ef00a78 [origin/bt2/original/develop] Merge branch 'master' of https://github.com/backtrader2/backtrader into bt2/original/master
-  bt2/original/master  ef00a78 [origin/bt2/original/master] Merge branch 'master' of https://github.com/backtrader2/backtrader into bt2/original/master
-  develop              9f843b0 MAINT: making things cleaner for testing bid/ask.
-  development          9f843b0 [origin/development: gone] MAINT: making things cleaner for testing bid/ask.
-  feat/ib/bidask       dcb4c1a Release 1.9.74.123
-  feat/ib/rt-bidask    7b366cd [origin/feat/ib/rt-bidask] FEAT: bid/ask stream. on and off. tested live.
-  master               9f843b0 [origin/master] MAINT: making things cleaner for testing bid/ask.
+
+      bt/original/develop  fca15d9 [origin/bt/original/develop] Release 1.9.75.123
+      bt/original/master   0fa63ef [origin/bt/original/master] Merge pull request #418 from Larry-u/patch-1
+      bt2/original/develop ef00a78 [origin/bt2/original/develop] Merge branch 'master' of https://github.com/backtrader2/backtrader into bt2/original/master
+      bt2/original/master  ef00a78 [origin/bt2/original/master] Merge branch 'master' of https://github.com/backtrader2/backtrader into bt2/original/master
+      develop              9f843b0 MAINT: making things cleaner for testing bid/ask.
+      development          9f843b0 [origin/development: gone] MAINT: making things cleaner for testing bid/ask.
+      feat/ib/bidask       dcb4c1a Release 1.9.74.123
+      feat/ib/rt-bidask    7b366cd [origin/feat/ib/rt-bidask] FEAT: bid/ask stream. on and off. tested live.
+      master               9f843b0 [origin/master] MAINT: making things cleaner for testing bid/ask.
 
 ## Fetching all remote branches
-for abranch in $(git branch -a | grep -v HEAD | grep remotes | sed "s/remotes\/origin\///g"); do git checkout $abranch ; done
+
+    for abranch in $(git branch -a | grep -v HEAD | grep remotes | sed "s/remotes\/origin\///g"); do git checkout $abranch ; done
+
+

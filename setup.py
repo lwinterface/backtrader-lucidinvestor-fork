@@ -73,7 +73,7 @@ setuptools.setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
-        'Intended Audience :: Do-It-Yourself Investor',
+        'Intended Audience :: Financial and Insurance Industry',
 
         # Indicate which Topics are covered by the package
         'Topic :: Software Development',
