@@ -39,7 +39,7 @@ with open(os.path.join(pname, vname)) as f:
 
 # Generate links
 gurl = 'https://gitlab.com/algorithmic-trading-library/' + pname
-gdurl = gurl + '/tarball/' + __version__
+gdurl = gurl + '/-/archive/' + __version__ + '/' + pname + '-' + __version__ + '.tar.gz'
 
 setuptools.setup(
     name=lucid_name,
