@@ -7,11 +7,20 @@ from datetime import datetime
 import pytz as tz
 
 
+# used for testing with 50 tickers from sp500
+# from pytickersymbols import PyTickerSymbols
+
+
 class St(bt.Strategy):
 
     def __init__(self):
         # nb of next_live run before clean shutdown
         self.runtime = 10
+        # buffer to load bid/ask in prenext
+        self.bidask_buffer = False
+
+        self.data_live = False
+        self.not_yet_live = [d._id for d in self.datas]
 
     def prenext(self):
         '''
@@ -20,6 +29,33 @@ class St(bt.Strategy):
             - alternative: see https://www.backtrader.com/blog/2019-05-20-momentum-strategy/momentum-strategy/
         :return:
         '''
+
+        # if self.data.p.initial_tickPrice is True, it means we want to accelerate LIVE using initial TickPrice
+        # if not - we do not accelerate, thus do not get into next()
+        if not self.data.p.initial_tickPrice:
+            return
+
+        if self.bidask_buffer:
+            print("\n PRENEXT sending to next")
+            self.next()
+        else:
+            try:
+                for asset in self.getdatanames():
+                    ask = 0
+                    bid = 0
+                    close = 0
+                    ask = self.datas[self.getdatanames().index(asset)].asklive['queue'].queue[-1].price
+                    bid = self.datas[self.getdatanames().index(asset)].bidlive['queue'].queue[-1].price
+                    close = self.datas[self.getdatanames().index(asset)].close[0]
+
+                # buffer to load bid/ask in prenext
+                self.bidask_buffer = True
+
+            except Exception as e:
+                print("\n BUFFERING BID-ASK. Issue with asset: " + str(asset))
+                print(" the issue is with the 0: bid=" + str(bid) + " ask=" + str(ask) + " close=" + str(close))
+                pass
+
         pass
 
     def next(self):
@@ -63,13 +99,20 @@ class St(bt.Strategy):
             if self.runtime < 1:
                 self.env.runstop()
 
-    data_live = False
 
     def notify_data(self, data, status, *args, **kwargs):
-        print('*' * 5, 'DATA NOTIF:', data._getstatusname(status), *args)
+        try:
+            print("\n DATA NOTIF >> " + str(
+                data._getstatusname(status)) + " instrument: " + data.tradecontract.m_localSymbol)
+        except Exception as e:
+            pass
 
         if status == data.LIVE:
-            self.data_live = True
+            if data._id in self.not_yet_live:
+                self.not_yet_live.remove(data._id)
+
+            if len(self.data_live) < 1:
+                self.data_live = True
 
 
 def run(args=None):
@@ -99,7 +142,26 @@ def run(args=None):
     # -> some stocks (like GSY invesco ultra short used for testing) would have a very low bid/ask price movement,
     # and thus would not trigger tickPrice or RTVolume quickly and would delay LIVE NOTIFICATION.
     ib_name = '-STK-SMART-USD'
-    assets = ['GSY', 'SPY']
+
+    # used to get all sp500 tickers for testing
+    # stock_data = PyTickerSymbols()
+    # sp500_google = stock_data.get_sp_500_nyc_google_tickers()
+    # sp500_tickers = [el.split(":",1)[1] for el in sp500_google]
+
+    # assets = ["QQQ","TLT", "SPLV", "GSY", "SPY", "QLD", "UBT", "UGL", "GLD", "TIP", "DIA", "EUO", "SSO", "YCS", "DDM"]
+
+    # 86
+    # STE: this information is provided on an indicative basis only.
+    # "HSIC" "ADI"
+    assets = ["MMM", "AXP", "AAPL", "BA", "CAT", "CVX", "CSCO", "KO", "DD",
+              "XOM", "GS", "GS", "HD", "IBM", "INTC", "JNJ", "JPM", "MCD", "NKE",
+              "MRK", "MSFT", "PFE", "PG", "TRV", "UNH", "VZ", "V", "WMT", "WBA",
+              "DIS", "ATVI", "ADBE", "AKAM", "GOOGL", "GOOG", "AMZN", "AAL", "AMGN", "TSLA",
+              "ADSK", "CHTR", "CTSH", "CMCSA", "COST", "CSX", "XRAY", "DISH", "DLTR", "EBAY",
+              "EA", "EXPE", "META", "FAST", "FISV", "GILD", "ILMN", "INCY", "INTU", "TMUS"]
+    # "ISRG", "KHC", "LRCX", "MAR", "MCHP", "MU", "MDLZ", "MNST", "NTAP", "NFLX",
+    # "NVDA", "NXPI", "ORLY", "PCAR", "PAYX", "PYPL", "QCOM", "REGN", "ROST", "STX",
+    # "SWKS", "SBUX", "TMUS",  "TXN"]
 
     for symbol in assets:
         # TODO: Multiple Timeframe Datas can be used in backtrader with no special objects or tweaking: just add the smaller timeframes first.

@@ -986,6 +986,15 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         # todo: I think we should add 1 False at the end for "subscribed snapshot"
         self.conn.reqMktData(tickerId, contract, bytes(ticks), False)
+        # sometimes we are missing the initial connection data (after successful reqMktData connection.
+        # Probable cause: # TWS API's inherent limitation of 50 messages per second
+        # (also implies a maximum of 50 orders per second being sent to the TWS)
+        # https://interactivebrokers.github.io/tws-api/order_limitations.html
+
+        # todo: Ideally we should be able to do it without sleep - but I did not find a more elegant manner - I did not
+        # found what should be listened/checked.
+        time.sleep(0.25)  # Time in seconds
+
         # The market data is then delivered, depending on the tick type selected via tickPrice (bid/ask), tickSize,
         # tickString (last close) or tickGeneric.
         return q, {'tickerId': tickerId, 'queue': q_bid}, {'tickerId': tickerId, 'queue': q_ask}
@@ -1006,7 +1015,8 @@ class IBStore(with_metaclass(MetaSingleton, object)):
     @ibregister
     def tickString(self, msg):
         # Receive and process a tickString message
-        # print('String' + str(msg))
+        #print('String' + str(msg))
+
         if msg.tickType == 48:  # RTVolume
             # https://interactivebrokers.github.io/tws-api/tick_types.html#rt_volume
             # The RT Volume tick type corresponds to the TWS' Time & Sales window and contains the last trade's price,
@@ -1060,7 +1070,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         valid RTVolume emitted as tickString (below)
         '''
 
-        # print('Price' + str(msg))
+        #print('TickPrice' + str(msg))
         # Used for "CASH" markets
         # The price field has been seen to be missing in some instances even if "field" is 1
         tickerId = msg.tickerId
@@ -1109,7 +1119,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
                         self.qs_bid[tickerId].get()
 
         # USE LAST_TRADE PRICE DELIVERED UPON SUCCESSFUL reqMarketData CONNECTION to trigger LIVE NOTIFICATION
-        if self._use_initial_tickPrice and self.initial_tickPrice[msg.tickerId] and not self._init_lastprice[msg.tickerId] and msg.field == 4:
+        if msg.field == 4 and self._use_initial_tickPrice and self.initial_tickPrice[msg.tickerId] and not self._init_lastprice[msg.tickerId]:
             # Last Price: Last price at which the contract traded (does not include some trades in RTVolume).
             # print("Last Price: " + str(msg))
             fakertvol = RTVolume(price=msg.price, tmoffset=self.tmoffset)
