@@ -56,11 +56,12 @@ class St(bt.Strategy):
                 if data._id in self.not_yet_live:
                     self.not_yet_live.remove(data._id)
 
-                if len(self.data_live) < 1:
+                if len(self.not_yet_live) < 1:
                     self.data_live = True
 
             except Exception as e:
                 print (" error with instrument: " + str(data.precontract.m_symbol))
+                print (e)
 
 def run(args=None):
     tz_default = tz.timezone('America/New_York')
