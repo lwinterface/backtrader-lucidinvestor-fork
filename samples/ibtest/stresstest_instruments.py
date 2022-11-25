@@ -94,14 +94,15 @@ def run(args=None):
 
     ib_name = '-STK-SMART-USD'
     assets = ["MMM", "AXP", "AAPL", "BA", "CAT", "CVX", "CSCO", "KO", "DD",
-              "XOM", "GS", "GS", "HD", "IBM", "INTC", "JNJ", "JPM", "MCD", "NKE",
-              "MRK", "MSFT", "PFE", "PG", "TRV", "UNH", "VZ", "V", "WMT", "WBA",]
-              #"DIS", "ATVI", "ADBE", "AKAM", "GOOGL", "GOOG", "AMZN", "AAL", "AMGN",
-              #"ADSK", "CHTR", "CTSH", "CMCSA", "COST", "CSX", "XRAY", "DISH", "DLTR", "EBAY",
-              #"EA", "EXPE", "META", "FAST", "FISV", "GILD", "INCY", "INTU", "TMUS"
-              #"ISRG", "KHC", "LRCX", "MAR", "MCHP", "MU", "MDLZ", "MNST", "NTAP", "NFLX",
+              "XOM", "GS", "HD", "IBM", "INTC", "JNJ", "JPM", "MCD", "NKE",
+              "MRK", "MSFT", "PFE", "PG", "TRV", "UNH", "VZ", "V", "WMT", "WBA",
+              "DIS", "ATVI", "ADBE", "AKAM", "GOOGL", "GOOG", "AMZN", "AAL", "AMGN",
+              "ADSK", "CHTR", "CTSH", "CMCSA", "COST", "CSX", "XRAY", "DISH", "DLTR", "EBAY",
+              "EA", "EXPE", "META", "FAST", "FISV", "GILD", "INCY", "INTU", "TMUS"]
+              #"ISRG", "KHC", "LRCX", "MAR", "MCHP", "MU", "MDLZ",
+              #"MNST", "NTAP", "NFLX",]
               #"NVDA", "NXPI", "ORLY", "PCAR", "PAYX", "PYPL", "QCOM", "REGN", "ROST", "STX",
-              #"SWKS", "SBUX", "TMUS",  "TXN", "HSIC" "ADI" "TSLA", "ILMN",]
+              #"SWKS", "SBUX", "TMUS", "TXN", "HSIC", "ADI", "TSLA", "ILMN",]
 
     reg = 0
     for symbol in assets:
@@ -111,10 +112,6 @@ def run(args=None):
         print(" Registering dataname: " + ib_symbol + " - as number: " +str(reg))
         data = store.getdata(dataname=ib_symbol, **datakwargs)
         cerebro.resampledata(data, name=symbol, **rekwargs)
-
-    # https://community.backtrader.com/topic/26/example-of-adding-live-data-to-static-in-strategy/50?page=3
-    # just to test if some resampling creates issues we've encountered - most likely not.
-    # time.sleep(5)  # solves issue with data ingestion failure
 
     cerebro.addstrategy(St)
     cerebro.run()
