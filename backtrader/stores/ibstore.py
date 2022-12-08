@@ -1031,7 +1031,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
                     # if tickPrice came in first, then len() would be 2, but if tickString came first, then len() is 1.
                     # if len() is 1, no action, the stream is already consistent (did not use tickPrice partial info)
-                    if len(self.qs.items()[0][1].queue) == 2:
+                    if len(self.qs[msg.tickerId].queue) == 2:
                         # remove the initial last_price (without size, vwap ...) for consistency guarantee
                         self.qs[msg.tickerId].get()
                     # stop any other manipulation on self.qs[msg.tickerId]
