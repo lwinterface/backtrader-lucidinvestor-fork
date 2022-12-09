@@ -9,4 +9,4 @@ rm -rf *.egg-info
 # in case anything goes wrong use:
 # $twine check dist/*
 python setup.py sdist bdist_wheel
-twine upload --verbose dist/*
+twine upload --config-file ../env_var/secret.pypirc --verbose dist/*
