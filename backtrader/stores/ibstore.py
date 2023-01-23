@@ -39,6 +39,7 @@ from backtrader import TimeFrame, Position
 from backtrader.metabase import MetaParams
 from backtrader.utils.py3 import bytes, bstr, queue, with_metaclass, long
 from backtrader.utils import AutoDict, UTC
+from backtrader.brokers import ibbroker
 
 bytes = bstr  # py2/3 need for ibpy
 
@@ -442,6 +443,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         for data in self.datas:
             t = threading.Thread(target=data.reqdata)
             t.start()
+            #time.sleep(0.1)
             ts.append(t)
 
         for t in ts:
@@ -638,7 +640,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         return tickerId, q
 
-    def getTickerQueue(self, start=False):
+    def getTickerQueue(self, start=False, for_reqdata=False):
         '''Creates ticker/Queue for data delivery to a data feed'''
         q = queue.Queue()
         # Insertion will block once this size has been reached, until queue items are consumed or queue is cleared
@@ -659,7 +661,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             self.qs_bid[tickerId] = q_bid
             self.qs_ask[tickerId] = q_ask
 
-            if self._use_initial_tickPrice:
+            if self._use_initial_tickPrice and for_reqdata:
                 self.initial_tickPrice[tickerId] = True
                 self._init_lastprice[tickerId] = False
 
@@ -671,8 +673,11 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         # pop ts (tickers) and with the result qs (queues)
         tickerId = self.ts.pop(q, None)
         self.qs.pop(tickerId, None)
+        self.qs_bid.pop(tickerId, None)
+        self.qs_ask.pop(tickerId, None)
 
         self.iscash.pop(tickerId, None)
+        self.initial_tickPrice.pop(tickerId, None)
 
         if sendnone:
             q.put(None)
@@ -896,7 +901,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
           - a Queue the client can wait on to receive a RTVolume instance
         '''
         # get a ticker/queue for identification/data delivery
-        tickerId, q, q_bid, q_ask = self.getTickerQueue()
+        tickerId, q, q_bid, q_ask = self.getTickerQueue(for_reqdata=True)
 
         # 20150929 - Only 5 secs supported for duration
         # whatToShow	the nature of the data being retrieved:
@@ -946,7 +951,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
         # get a ticker/queue for identification/data delivery
         # the bid/ask price is part of the default dataset returned
-        tickerId, q, q_bid, q_ask = self.getTickerQueue()
+        tickerId, q, q_bid, q_ask = self.getTickerQueue(for_reqdata=True)
 
         # genericTickList	comma separated ids of the available generic ticks:
         #     100 Option Volume (currently for stocks)
@@ -1597,7 +1602,8 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         self._event_accdownload.set()
         if False:
             if self.port_update:
-                self.broker.push_portupdate()
+                if isinstance(self.broker, ibbroker.IBBroker):
+                    self.broker.push_portupdate()
 
                 self.port_update = False
 
@@ -1621,7 +1627,8 @@ class IBStore(with_metaclass(MetaSingleton, object)):
 
                 # Flag signal to broker at the end of account download
                 # self.port_update = True
-                self.broker.push_portupdate()
+                if isinstance(self.broker, ibbroker.IBBroker):
+                    self.broker.push_portupdate()
 
     def getposition(self, contract, clone=False):
         # Lock access to the position dicts. This is called from main thread
