@@ -57,7 +57,7 @@ setuptools.setup(
     download_url=gdurl,
 
     # Author details
-    author='maintainer: LucidInvestor - original: Daniel Rodriguez (danjrod@gmail.com)',
+    author='maintainer: LucidInvestor',
     author_email='info@lucidinvestor.ca',
 
     # Choose your license

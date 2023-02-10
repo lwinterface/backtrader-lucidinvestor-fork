@@ -1,16 +1,17 @@
-# backtrader
+backtrader
+**********
 
-# Yahoo API Note
+credits
+#######
 
-  [2018-11-16] After some testing it would seem that data downloads can be
-  again relied upon over the web interface (or API ``v7``)
+original author: Daniel Rodriguez (danjrod@gmail.com)
+original unmaintained github: https://github.com/mementum/backtrader
+alternative unmaintained github: https://github.com/backtrader2/backtrader
 
-# Tickets
+Tickets
+#######
 
-  The ticket system is (was, actually) more often than not abused to ask for
-  advice about samples.
-
-For **feedback/questions/...** use the `Community <https://community.backtrader.com>`_
+The ticket system is available at `LucidInvestor's public gitlab instance <https://gitlab.com/algorithmic-trading-library/backtrader/-/issues>`_.
 
 Here a snippet of a Simple Moving Average CrossOver. It can be done in several
 different ways. Use the docs (and examples) Luke!
@@ -39,7 +40,43 @@ Including a full featured chart. Give it a try! This is included in the samples
 as ``sigsmacross/sigsmacross2.py``. Along it is ``sigsmacross.py`` which can be
 parametrized from the command line.
 
-# Features:
+Installation
+############
+
+``backtrader`` is self-contained with no external dependencies (except if you
+want to plot)
+
+From *pypi*:
+
+  - ``pip install backtrader-lucidinvestor``
+
+  - ``pip install backtrader[plotting]``
+
+    If ``matplotlib`` is not installed and you wish to do some plotting
+
+.. note:: The minimum matplotlib version is ``1.4.1``
+
+An example for *IB* Data Feeds/Trading:
+
+  - ``IbPy`` ``pip install IbPy-lucidinvestor``
+
+For other functionalities like: ``Visual Chart``, ``Oanda``, ``TA-Lib``, check
+the dependencies in the documentation.
+
+From source:
+
+  - Place the *backtrader* directory found in the sources inside your project
+
+Python 2/3 Support
+##################
+
+  - Python >= ``3.2``
+
+  - It also works with ``pypy`` and ``pypy3`` (no plotting - ``matplotlib`` is
+    not supported under *pypy*)
+
+Features
+********
 
 Live Trading and backtesting platform written in Python.
 
@@ -75,7 +112,8 @@ Live Trading and backtesting platform written in Python.
   - Trading Calendars
   - Plotting (requires matplotlib)
 
-# Documentation
+Documentation
+*************
 
 The blog:
 
@@ -89,46 +127,8 @@ List of built-in Indicators (122)
 
   - `Indicators Reference <http://www.backtrader.com/docu/indautoref.html>`_
 
-# Python 2/3 Support
-
-  - Python >= ``3.2``
-
-  - It also works with ``pypy`` and ``pypy3`` (no plotting - ``matplotlib`` is
-    not supported under *pypy*)
-
-# Installation
-
-``backtrader`` is self-contained with no external dependencies (except if you
-want to plot)
-
-From *pypi*:
-
-  - ``pip install backtrader``
-
-  - ``pip install backtrader[plotting]``
-
-    If ``matplotlib`` is not installed and you wish to do some plotting
-
-.. note:: The minimum matplotlib version is ``1.4.1``
-
-An example for *IB* Data Feeds/Trading:
-
-  - ``IbPy`` doesn't seem to be in PyPi. Do either::
-
-      pip install git+https://github.com/blampe/IbPy.git
-
-    or (if ``git`` is not available in your system)::
-
-      pip install https://github.com/blampe/IbPy/archive/master.zip
-
-For other functionalities like: ``Visual Chart``, ``Oanda``, ``TA-Lib``, check
-the dependencies in the documentation.
-
-From source:
-
-  - Place the *backtrader* directory found in the sources inside your project
-
-# Version numbering
+Version numbering
+*****************
 
 X.Y.Z.I
 
@@ -140,7 +140,8 @@ X.Y.Z.I
     changes, small bug fixes
   - I: Number of Indicators already built into the platform
 
-## major Branches
+major Branches
+##############
 
 * **master**  - Merge from Develop. QA for full integration happens here.
   Contains the last tested/verified global code integration.
@@ -150,7 +151,9 @@ X.Y.Z.I
 * **bug** - checkout from master and pull.req. OR checkout from release branch and pull.req/Master
 * **features** -  checkout Develop.
 
-## Branch naming conventions
+Branch naming conventions
+#########################
+
 shall follow that of [GroupName/Info](http://stackoverflow.com/questions/273695/git-branch-naming-best-practices):
 
 1. Use **grouping names** at the beginning of your branch names.
@@ -159,7 +162,9 @@ shall follow that of [GroupName/Info](http://stackoverflow.com/questions/273695/
 4. Do not use bare numbers as leading parts.
 5. Avoid long descriptive names for long-lived branches.
 
-## Grouping Names
+Grouping Names
+##############
+
 Short and well-defined group names (used to tell you to which part of your workflow each branch belongs):
 `code-block/ text`
 
@@ -171,7 +176,8 @@ Short and well-defined group names (used to tell you to which part of your workf
 - **test**
 - **doc** documentation (readme, code comment)
 
-## Commit messages
+Commit messages
+###############
 
 Standard prefixes to start a commit message: `code-block:: text`
 
@@ -196,7 +202,8 @@ Commit lines should be no longer than `72 characters`__. The first line of the c
 __ https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project
 
 
-# Repo Structure
+Repo Structure
+##############
 
 git remote add bt2-original https://github.com/backtrader2/backtrader.git
 git fetch bt2-original master
@@ -229,7 +236,8 @@ git branch -vv
       feat/ib/rt-bidask    7b366cd [origin/feat/ib/rt-bidask] FEAT: bid/ask stream. on and off. tested live.
       master               9f843b0 [origin/master] MAINT: making things cleaner for testing bid/ask.
 
-## Fetching all remote branches
+Fetching all remote branches
+############################
 
     for abranch in $(git branch -a | grep -v HEAD | grep remotes | sed "s/remotes\/origin\///g"); do git checkout $abranch ; done
 

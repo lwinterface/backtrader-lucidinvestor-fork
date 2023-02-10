@@ -104,7 +104,7 @@ def run(args=None):
               #"NVDA", "NXPI", "ORLY", "PCAR", "PAYX", "PYPL", "QCOM", "REGN", "ROST", "STX",
               #"SWKS", "SBUX", "TMUS", "TXN", "HSIC", "ADI", "TSLA", "ILMN",]
 
-    assets = ["SPY"]
+    #assets = ["SPY"]
     reg = 0
     for symbol in assets:
         # Create the Data Feed for Cerebro
