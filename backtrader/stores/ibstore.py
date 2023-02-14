@@ -274,6 +274,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
         self.port_update = False  # indicate whether to signal to broker
 
         self.positions = collections.defaultdict(Position)  # actual positions
+        self.positions_current = dict()
 
         self._tickerId = itertools.count(self.REQIDBASE)  # unique tickerIds
         self.orderid = None  # next possible orderid (will be itertools.count)
@@ -1615,6 +1616,7 @@ class IBStore(with_metaclass(MetaSingleton, object)):
             if not self._event_accdownload.is_set():  # 1st event seen
                 position = Position(msg.position, msg.averageCost)
                 self.positions[msg.contract.m_conId] = position
+                self.cdetails[msg.contract.m_conId] = msg.contract
             else:
                 position = self.positions[msg.contract.m_conId]
                 if not position.fix(msg.position, msg.averageCost):
